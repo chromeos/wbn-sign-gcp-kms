@@ -14,22 +14,17 @@ class GCPWbnSigner implements ISigningStrategy {
     async sign(data: Uint8Array): Promise<Uint8Array> {
         const client = new KeyManagementServiceClient();
 
-        const name = client.cryptoKeyVersionPath(this.projectId, this.locationId, this.keyringId, this.keyId, this.versionId);
-        const hash = createHash('sha256');
-        hash.update(data);
-
-        const request = {
-            name,
+        const [response] = await client.asymmetricSign({
+            name: client.cryptoKeyVersionPath(this.projectId, this.locationId, this.keyringId, this.keyId, this.versionId),
             digest: {
-                sha256: hash.digest()
+                sha256: createHash('sha256').update(data).digest()
             }
-        };
+        });
 
-        const [response] = await client.asymmetricSign(request);
         if (response.signature instanceof Uint8Array){
             return response.signature;
         }
-        throw 'ERROR';
+        throw 'ERROR while signing';
     }
 
     async getPublicKey(): Promise<KeyObject> {
@@ -38,9 +33,10 @@ class GCPWbnSigner implements ISigningStrategy {
         const [publicKey] = await client.getPublicKey({
             name: name
         });
-        
-        const keyObject = createPublicKey(publicKey.pem as string);
-        return keyObject;
+        if (typeof publicKey.pem === 'string') {
+            return createPublicKey(publicKey.pem as string);
+        }
+        throw 'ERROR while getting public key';
     }
 
     private projectId: string;
