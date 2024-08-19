@@ -15,7 +15,8 @@
     "build:cjs": "esbuild --bundle --format=cjs --external:cborg --outfile=lib/wbn-sign-gcp-kms.cjs src/wbn-sign-gcp-kms.ts --platform=node"
   },
   "bin": {
-    "wbn-sign-gcp-kms": "./bin/wbn-sign-gcp-kms.js"
+    "wbn-sign-gcp-kms": "./bin/wbn-sign-gcp-kms.js",
+    "wbn-dump-id-gcp-kms": "./bin/wbn-dump-id-gcp-kms.js"
   },
   "author": "Luke Klimek <zgroza@google.com> (https://github.com/zgroza)",
   "license": "Apache-2.0",

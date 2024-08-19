@@ -8,14 +8,44 @@ The CLI tool `wbn-sign-gcp-kms` takes an existing bundle file and info as to whe
 
 ## Usage
 
-Example:
-```
-wbn-sign-gcp-kms \
-  --project project-id \
-  --location global \
-  --keyring default-keyring \
-  --key default-key \
-  --version 1 \
+Example of signing:
+```bash
+$ wbn-sign-gcp-kms \
+  --key-id-json ./key1.json \
+  --key-id-json ./key2.json \
   --input webbundle.wbn \
   --output webbundle.swbn
+```
+
+Example of dumping bundle IDs:
+```bash
+$ wbn-dump-id-gcp-kms --key-id-json ./key1.json --key-id-json ./key2.json
+For: {
+  project: 'project-id',
+  location: 'global',
+  keyring: 'keyring-id',
+  key: 'key-id',
+  version: '1'
+}
+Web bundle id: ao6qlxy53numov53l37w3vcvtpckzhmbvhoqtqs7g6enzlkqdya5waacai
+For: {
+  project: 'project-id',
+  location: 'global',
+  keyring: 'keyring-id',
+  key: 'key-id',
+  version: '2'
+}
+Web bundle id: apoxa7f2rif64q7nzkp5l5cgdhkusxwzl4fjl4m6vkbbpbptpdpcoaacai
+```
+
+Sample JSON identifying a key:
+
+```json
+{
+  "project": "project-id",
+  "location": "global",
+  "keyring": "keyring-id",
+  "key": "key-id",
+  "version": "1"
+}
 ```

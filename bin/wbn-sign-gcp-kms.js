@@ -7,37 +7,45 @@ import { Command, Option } from 'commander';
 const program = new Command();
 
 program
-  .requiredOption('--project <project-id>', 'Your Google Cloud project ID')
-  .requiredOption('--location <location>', 'The location of the keyring.')
-  .requiredOption('--keyring <keyring-name>', 'The name of the Cloud KMS keyring')
-  .requiredOption('--key <key-name>', 'The name of the Cloud KMS key')
-  .requiredOption('--version <key-version>', 'The version of the Cloud KMS key')
-  .requiredOption('--input <input-file>', 'The path to the input web bundle file')
-  .requiredOption('--output <output-file>', 'The path to save the signed web bundle file')
+  .requiredOption('--input <input-file>', 'The path to the input web bundle file.')
+  .requiredOption('--output <output-file>', 'The path to save the signed web bundle file.')
+  .requiredOption('--web-bundle-id <bundle-id>', 'Signed Web Bundle ID associated with the bundle.')
+  .option('--key-id-json <key-id-json>', 'The path to a JSON file containing key ID information.', collectKeyIds, [])
   .parse(process.argv);
+
+function collectKeyIds(value, previous) {
+  const keyInfo = JSON.parse(fs.readFileSync(value, 'utf-8'));
+  previous.push(keyInfo);
+  return previous;
+}
 
 const options = program.opts();
 
 const { 
-  project, 
-  location,
-  keyring,
-  key, 
-  version, 
   input, 
-  output 
+  output,
+  webBundleId,
+  keyIdJson 
 } = options;
 
-
 const webBundle = fs.readFileSync(input);
-const signer = new GCPWbnSigner(project, location, keyring, key, version)
-const bundleId = (new wbnSign.WebBundleId(await signer.getPublicKey())).serialize();
+
+const signers = keyIdJson.map(keyInfo => {
+  const { 
+    project, 
+    location,
+    keyring,
+    key, 
+    version 
+  } = keyInfo;
+  return new GCPWbnSigner(project, location, keyring, key, version);
+});
 
 const { signedWebBundle } = await new wbnSign.IntegrityBlockSigner(
   true,
   webBundle,
-  bundleId,
-  [signer]
+  webBundleId,
+  signers
 ).sign();
 
 fs.writeFileSync(output, signedWebBundle);
