@@ -1,0 +1,39 @@
+{
+  "name": "wbn-sign-gcp-kms",
+  "version": "0.0.1",
+  "description": "Tool for signing a web bundle using GCP KMS",
+  "main": "./lib/wbn-sign-gcp-kms.cjs",
+  "type": "module",
+  "exports": {
+    "import": "./lib/wbn-sign-gcp-kms.js",
+    "require": "./lib/wbn-sign-gcp-kms.cjs"
+  },
+  "types": "./lib/wbn-sign-gcp-kms.d.js",
+  "scripts": {
+    "build": "npm run build:esm && npm run build:cjs",
+    "build:esm": "tsc",
+    "build:cjs": "esbuild --bundle --format=cjs --external:cborg --outfile=lib/wbn-sign-gcp-kms.cjs src/wbn-sign-gcp-kms.ts --platform=node"
+  },
+  "bin": {
+    "wbn-sign-gcp-kms": "./bin/wbn-sign-gcp-kms.js"
+  },
+  "author": "Luke Klimek <zgroza@google.com> (https://github.com/zgroza)",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@google-cloud/kms": "^4.5.0",
+    "commander": "^7.0.0",
+    "read": "^2.0.0",
+    "wbn-sign": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/fast-crc32c": "^2.0.2",
+    "@types/node": "^16.0.0",
+    "esbuild": "^0.14.47",
+    "prettier": "2.8.0",
+    "typescript": "^4.9.5"
+  },
+  "engines": {
+    "node": ">= 16.0.0",
+    "npm": ">= 8.0.0"
+  }
+}
