@@ -1,6 +1,6 @@
 import { KeyManagementServiceClient } from '@google-cloud/kms';
 import { ISigningStrategy } from "wbn-sign/lib/wbn-sign";
-import { KeyObject, createPublicKey } from 'crypto';
+import { KeyObject, createPublicKey, createHash } from 'crypto';
 
 class GCPWbnSigner implements ISigningStrategy {
    constructor(projectId: string, locationId: string, keyringId: string, keyId: string, versionId: string) {
@@ -15,8 +15,7 @@ class GCPWbnSigner implements ISigningStrategy {
         const client = new KeyManagementServiceClient();
 
         const name = client.cryptoKeyVersionPath(this.projectId, this.locationId, this.keyringId, this.keyId, this.versionId);
-        const crypto = require('crypto');
-        const hash = crypto.createHash('sha256');
+        const hash = createHash('sha256');
         hash.update(data);
 
         const request = {
