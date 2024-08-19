@@ -1,34 +1,6 @@
 import { KeyManagementServiceClient } from '@google-cloud/kms';
 import { ISigningStrategy } from "wbn-sign/lib/wbn-sign";
-import { KeyObject } from 'crypto';
-
-function str2ab(str: string) {
-    const buf = new ArrayBuffer(str.length);
-    const bufView = new Uint8Array(buf);
-    for (let i = 0, strLen = str.length; i < strLen; i++) {
-        bufView[i] = str.charCodeAt(i);
-    }
-    return buf;
-}
-
-async function pemToKeyObject(pem: string): Promise<KeyObject> {
-    const pemHeader = "-----BEGIN PUBLIC KEY-----";
-    const pemFooter = "-----END PUBLIC KEY-----";
-    const pemContents = pem.substring(pemHeader.length, pem.length - pemFooter.length - 1);
-    const binaryDerString = atob(pemContents);
-    const binaryDer = str2ab(binaryDerString);
-
-    return KeyObject.from(await crypto.subtle.importKey(
-        "spki",
-        binaryDer,
-        {
-        name: "ECDSA",
-        namedCurve: "P-256"
-        },
-        true,
-        []
-    ));
-}
+import { KeyObject, createPublicKey } from 'crypto';
 
 class GCPWbnSigner implements ISigningStrategy {
    constructor(projectId: string, locationId: string, keyringId: string, keyId: string, versionId: string) {
@@ -68,7 +40,7 @@ class GCPWbnSigner implements ISigningStrategy {
             name: name
         });
         
-        const keyObject = await pemToKeyObject(publicKey.pem as string);
+        const keyObject = createPublicKey(publicKey.pem as string);
         return keyObject;
     }
 
