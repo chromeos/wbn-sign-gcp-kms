@@ -3,19 +3,22 @@ import { ISigningStrategy } from "wbn-sign/lib/wbn-sign";
 import { KeyObject, createPublicKey, createHash } from 'crypto';
 
 class GCPWbnSigner implements ISigningStrategy {
-   constructor(projectId: string, locationId: string, keyringId: string, keyId: string, versionId: string) {
-        this.projectId = projectId;
-        this.locationId = locationId;
-        this.keyringId = keyringId;
-        this.keyId = keyId;
-        this.versionId = versionId;
+    private kmsClient: KeyManagementServiceClient;
+
+    constructor(
+        private projectId: string,
+        private locationId: string,
+        private keyringId: string,
+        private keyId: string,
+        private versionId: string,
+        kmsClient?: KeyManagementServiceClient
+    ) {
+        this.kmsClient = kmsClient || new KeyManagementServiceClient();
     }
 
     async sign(data: Uint8Array): Promise<Uint8Array> {
-        const client = new KeyManagementServiceClient();
-
-        const [response] = await client.asymmetricSign({
-            name: client.cryptoKeyVersionPath(this.projectId, this.locationId, this.keyringId, this.keyId, this.versionId),
+        const [response] = await this.kmsClient.asymmetricSign({
+            name: this.kmsClient.cryptoKeyVersionPath(this.projectId, this.locationId, this.keyringId, this.keyId, this.versionId),
             digest: {
                 sha256: createHash('sha256').update(data).digest()
             }
@@ -24,26 +27,18 @@ class GCPWbnSigner implements ISigningStrategy {
         if (response.signature instanceof Uint8Array){
             return response.signature;
         }
-        throw 'ERROR while signing';
+        throw new Error('No signature in response!');
     }
 
     async getPublicKey(): Promise<KeyObject> {
-        const client = new KeyManagementServiceClient();
-        const name = client.cryptoKeyVersionPath(this.projectId, this.locationId, this.keyringId, this.keyId, this.versionId);
-        const [publicKey] = await client.getPublicKey({
-            name: name
+        const [publicKey] = await this.kmsClient.getPublicKey({
+            name: this.kmsClient.cryptoKeyVersionPath(this.projectId, this.locationId, this.keyringId, this.keyId, this.versionId)
         });
         if (typeof publicKey.pem === 'string') {
             return createPublicKey(publicKey.pem as string);
         }
-        throw 'ERROR while getting public key';
+        throw new Error('No public key in response!');
     }
-
-    private projectId: string;
-    private locationId: string;
-    private keyringId: string;
-    private keyId: string;
-    private versionId: string;
 }
 
 export { GCPWbnSigner }; 

@@ -12,7 +12,8 @@
   "scripts": {
     "build": "npm run build:esm && npm run build:cjs",
     "build:esm": "tsc",
-    "build:cjs": "esbuild --bundle --format=cjs --external:cborg --outfile=lib/wbn-sign-gcp-kms.cjs src/wbn-sign-gcp-kms.ts --platform=node"
+    "build:cjs": "esbuild --bundle --format=cjs --external:cborg --outfile=lib/wbn-sign-gcp-kms.cjs src/wbn-sign-gcp-kms.ts --platform=node",
+    "test": "jasmine tests/*.js tests/*.cjs"
   },
   "bin": {
     "wbn-sign-gcp-kms": "./bin/wbn-sign-gcp-kms.js",
@@ -31,7 +32,8 @@
     "@types/node": "^16.0.0",
     "esbuild": "^0.14.47",
     "prettier": "2.8.0",
-    "typescript": "^4.9.5"
+    "typescript": "^4.9.5",
+    "jasmine": "^5.2.0"
   },
   "engines": {
     "node": ">= 16.0.0",
