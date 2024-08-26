@@ -1,4 +1,4 @@
-# Signing with Integrity Block
+# Signing web bundles using GCP KMS API
 
 This is a Node.js module for signing
 [Web Bundles](https://wpack-wg.github.io/bundled-responses/draft-ietf-wpack-bundled-responses.html)
@@ -10,6 +10,26 @@ where in GCP is your `EC_SIGN_P256_SHA256` key located, then saves the signed
 web bundle in specified `.swbn` file.
 
 ## Usage
+
+### Lib
+
+You can supply the `GCPWbnSigner` class to `wbnSign.IntegrityBlockSigner` from the `wbn-sign` NPM package like this:
+
+```js
+import { GCPWbnSigner } from 'wbn-sign-gcp-kms';
+
+...
+
+const { signedWebBundle } = await new wbnSign.IntegrityBlockSigner(
+  true,
+  webBundle,
+  webBundleId,
+  [new GCPWbnSigner(projectId, locationId, keyringId, keyId, versionId)]
+).sign();
+```
+Provided that the key path is correct and you are correctly authenticated for the purpose of [GCP KMS Node.js API](https://cloud.google.com/nodejs/docs/reference/kms/latest), this will give you the signed web bundle.
+
+### CLI
 
 Example of signing:
 
