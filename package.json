@@ -13,7 +13,8 @@
     "build": "npm run build:esm && npm run build:cjs",
     "build:esm": "tsc",
     "build:cjs": "esbuild --bundle --format=cjs --external:cborg --outfile=lib/wbn-sign-gcp-kms.cjs src/wbn-sign-gcp-kms.ts --platform=node",
-    "test": "jasmine tests/*.js tests/*.cjs"
+    "test": "jasmine tests/*.js tests/*.cjs",
+    "lint": "npx prettier --write src/ tests/ bin/ README.md --ignore-unknown --config ./package.json"
   },
   "bin": {
     "wbn-sign-gcp-kms": "./bin/wbn-sign-gcp-kms.js",
@@ -38,5 +39,12 @@
   "engines": {
     "node": ">= 16.0.0",
     "npm": ">= 8.0.0"
+  },
+  "prettier": {
+    "tabWidth": 2,
+    "semi": true,
+    "singleQuote": true,
+    "printWidth": 80,
+    "proseWrap": "always"
   }
 }

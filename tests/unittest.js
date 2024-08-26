@@ -14,10 +14,14 @@ describe('GCPWbnSigner', () => {
   beforeEach(() => {
     mockKmsClient = {
       cryptoKeyVersionPath: jasmine.createSpy('cryptoKeyVersionPath'),
-      asymmetricSign: jasmine.createSpy('asymmetricSign').and.resolveTo([{ signature: new Uint8Array([4, 5, 6]) }]),
-      getPublicKey: jasmine.createSpy('getPublicKey').and.resolveTo([{
-        pem: samplePublicKey
-       }]),
+      asymmetricSign: jasmine
+        .createSpy('asymmetricSign')
+        .and.resolveTo([{ signature: new Uint8Array([4, 5, 6]) }]),
+      getPublicKey: jasmine.createSpy('getPublicKey').and.resolveTo([
+        {
+          pem: samplePublicKey,
+        },
+      ]),
     };
 
     signer = new GCPWbnSigner(
@@ -39,7 +43,13 @@ describe('GCPWbnSigner', () => {
     const signature = await signer.sign(testData);
 
     expect(signature).toEqual(expectedSignature);
-    expect(mockKmsClient.cryptoKeyVersionPath).toHaveBeenCalledWith('projectId', 'locationId', 'keyringId', 'keyId', 'versionId');
+    expect(mockKmsClient.cryptoKeyVersionPath).toHaveBeenCalledWith(
+      'projectId',
+      'locationId',
+      'keyringId',
+      'keyId',
+      'versionId'
+    );
     expect(mockKmsClient.asymmetricSign).toHaveBeenCalledWith({
       name: 'path/to/key/version',
       digest: {
@@ -51,13 +61,17 @@ describe('GCPWbnSigner', () => {
   it('should throw error when signing fails', async () => {
     mockKmsClient.asymmetricSign.and.rejectWith(new Error('Signing failed'));
 
-    await expectAsync(signer.sign(new Uint8Array())).toBeRejectedWithError('Signing failed');
+    await expectAsync(signer.sign(new Uint8Array())).toBeRejectedWithError(
+      'Signing failed'
+    );
   });
 
   it('should throw error when returned invalid object as signature', async () => {
     mockKmsClient.asymmetricSign.and.returnValue([{ not_signature: true }]);
 
-    await expectAsync(signer.sign(new Uint8Array())).toBeRejectedWithError('No signature in response!');
+    await expectAsync(signer.sign(new Uint8Array())).toBeRejectedWithError(
+      'No signature in response!'
+    );
   });
 
   it('should get public key', async () => {
@@ -67,19 +81,33 @@ describe('GCPWbnSigner', () => {
     const publicKey = await signer.getPublicKey();
 
     expect(publicKey).toEqual(expectedPublicKey);
-    expect(mockKmsClient.cryptoKeyVersionPath).toHaveBeenCalledWith('projectId', 'locationId', 'keyringId', 'keyId', 'versionId');
-    expect(mockKmsClient.getPublicKey).toHaveBeenCalledWith({ name: 'path/to/key/version' });
+    expect(mockKmsClient.cryptoKeyVersionPath).toHaveBeenCalledWith(
+      'projectId',
+      'locationId',
+      'keyringId',
+      'keyId',
+      'versionId'
+    );
+    expect(mockKmsClient.getPublicKey).toHaveBeenCalledWith({
+      name: 'path/to/key/version',
+    });
   });
 
   it('should throw error when getting public key fails', async () => {
-    mockKmsClient.getPublicKey.and.rejectWith(new Error('Get Public Key failed'));
+    mockKmsClient.getPublicKey.and.rejectWith(
+      new Error('Get Public Key failed')
+    );
 
-    await expectAsync(signer.getPublicKey()).toBeRejectedWithError('Get Public Key failed');
+    await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
+      'Get Public Key failed'
+    );
   });
 
   it('should throw error when got unexpected object as public key', async () => {
-    mockKmsClient.getPublicKey.and.returnValue([{not_pem: true}]);
+    mockKmsClient.getPublicKey.and.returnValue([{ not_pem: true }]);
 
-    await expectAsync(signer.getPublicKey()).toBeRejectedWithError('No public key in response!');
+    await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
+      'No public key in response!'
+    );
   });
 });
