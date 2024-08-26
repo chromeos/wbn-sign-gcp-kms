@@ -5,10 +5,6 @@ This is a Node.js module for signing
 using [wbn-sign](https://github.com/WICG/webpackage/tree/main/js/sign) with
 [GCP KMS API](https://cloud.google.com/kms/docs/create-validate-signatures).
 
-The CLI tool `wbn-sign-gcp-kms` takes an existing bundle file and info as to
-where in GCP is your `EC_SIGN_P256_SHA256` key located, then saves the signed
-web bundle in specified `.swbn` file.
-
 ## Usage
 
 ### Lib
