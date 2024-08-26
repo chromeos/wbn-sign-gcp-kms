@@ -1,7 +1,7 @@
 import { GCPWbnSigner } from '../lib/wbn-sign-gcp-kms.js';
 import { createPublicKey } from 'crypto';
 
-const samplePublicKey =
+const TEST_PUBLIC_KEY =
   '-----BEGIN PUBLIC KEY-----\n' +
   'MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE0P43I+jv1i2cc+IHBH3Ht/AbaJ0Bwwtk\n' +
   'x2BDh0PZ7t09Epz55kv+/tJq4n9Lty8GJ5rm9povD3My/dz5Vkd7JA==\n' +
@@ -19,7 +19,7 @@ describe('GCPWbnSigner', () => {
         .and.resolveTo([{ signature: new Uint8Array([4, 5, 6]) }]),
       getPublicKey: jasmine.createSpy('getPublicKey').and.resolveTo([
         {
-          pem: samplePublicKey,
+          pem: TEST_PUBLIC_KEY,
         },
       ]),
     };
@@ -75,7 +75,7 @@ describe('GCPWbnSigner', () => {
   });
 
   it('should get public key', async () => {
-    const expectedPublicKey = createPublicKey(samplePublicKey);
+    const expectedPublicKey = createPublicKey(TEST_PUBLIC_KEY);
     mockKmsClient.cryptoKeyVersionPath.and.returnValue('path/to/key/version');
 
     const publicKey = await signer.getPublicKey();

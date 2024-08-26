@@ -17,6 +17,7 @@ Example of signing:
 $ wbn-sign-gcp-kms \
   --key-id-json ./key1.json \
   --key-id-json ./key2.json \
+  --web-bundle-id ao6qlxy53numov53l37w3vcvtpckzhmbvhoqtqs7g6enzlkqdya5waacai \
   --input webbundle.wbn \
   --output webbundle.swbn
 ```

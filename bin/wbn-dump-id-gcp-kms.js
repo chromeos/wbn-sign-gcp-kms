@@ -1,29 +1,9 @@
 #!/usr/bin/env node
 import { GCPWbnSigner } from '../lib/wbn-sign-gcp-kms.cjs';
-import * as fs from 'fs';
 import * as wbnSign from 'wbn-sign';
-import { Command, Option } from 'commander';
+import { getDumpIdArgs } from '../lib/cli/cli-tools.js';
 
-const program = new Command();
-
-program
-  .option(
-    '--key-id-json <key-id-json>',
-    'The path to a JSON file containing key ID information.',
-    collectKeyIds,
-    []
-  )
-  .parse(process.argv);
-
-function collectKeyIds(value, previous) {
-  const keyInfo = JSON.parse(fs.readFileSync(value, 'utf-8'));
-  previous.push(keyInfo);
-  return previous;
-}
-
-const options = program.opts();
-
-for (const keyInfo of options.keyIdJson) {
+for (const keyInfo of getDumpIdArgs(process.argv).keyIdJson) {
   const { project, location, keyring, key, version } = keyInfo;
   console.log('For:', keyInfo);
   console.log(

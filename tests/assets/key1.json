@@ -1,0 +1,7 @@
+{
+  "project": "project-id",
+  "location": "global",
+  "keyring": "keyring-id",
+  "key": "key-id",
+  "version": "1"
+}
