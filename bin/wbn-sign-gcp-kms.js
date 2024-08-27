@@ -30,7 +30,6 @@ const signers = keyIdJson.map((keyInfo) => {
 });
 
 const { signedWebBundle } = await new wbnSign.IntegrityBlockSigner(
-  true,
   webBundle,
   webBundleId,
   signers
