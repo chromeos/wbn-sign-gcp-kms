@@ -18,7 +18,7 @@ import { KeyManagementServiceClient } from '@google-cloud/kms';
 import { ISigningStrategy } from 'wbn-sign/lib/wbn-sign';
 import { KeyObject, createPublicKey, createHash } from 'crypto';
 
-class GCPWbnSigner implements ISigningStrategy {
+export class GCPWbnSigner implements ISigningStrategy {
   // private kmsClient: KeyManagementServiceClient;
   #kmsClient;
   #projectId;
@@ -79,5 +79,3 @@ class GCPWbnSigner implements ISigningStrategy {
     throw new Error('No public key in response!');
   }
 }
-
-export { GCPWbnSigner };
