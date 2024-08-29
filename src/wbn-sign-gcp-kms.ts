@@ -19,27 +19,38 @@ import { ISigningStrategy } from 'wbn-sign/lib/wbn-sign';
 import { KeyObject, createPublicKey, createHash } from 'crypto';
 
 class GCPWbnSigner implements ISigningStrategy {
-  private kmsClient: KeyManagementServiceClient;
+  // private kmsClient: KeyManagementServiceClient;
+  #kmsClient;
+  #projectId;
+  #locationId;
+  #keyringId;
+  #keyId;
+  #versionId;
 
   constructor(
-    private projectId: string,
-    private locationId: string,
-    private keyringId: string,
-    private keyId: string,
-    private versionId: string,
+    projectId: string,
+    locationId: string,
+    keyringId: string,
+    keyId: string,
+    versionId: string,
     kmsClient?: KeyManagementServiceClient
   ) {
-    this.kmsClient = kmsClient || new KeyManagementServiceClient();
+    this.#kmsClient = kmsClient || new KeyManagementServiceClient();
+    this.#projectId = projectId;
+    this.#locationId = locationId;
+    this.#keyringId = keyringId;
+    this.#keyId = keyId;
+    this.#versionId = versionId;
   }
 
   async sign(data: Uint8Array): Promise<Uint8Array> {
-    const [response] = await this.kmsClient.asymmetricSign({
-      name: this.kmsClient.cryptoKeyVersionPath(
-        this.projectId,
-        this.locationId,
-        this.keyringId,
-        this.keyId,
-        this.versionId
+    const [response] = await this.#kmsClient.asymmetricSign({
+      name: this.#kmsClient.cryptoKeyVersionPath(
+        this.#projectId,
+        this.#locationId,
+        this.#keyringId,
+        this.#keyId,
+        this.#versionId
       ),
       digest: {
         sha256: createHash('sha256').update(data).digest(),
@@ -53,13 +64,13 @@ class GCPWbnSigner implements ISigningStrategy {
   }
 
   async getPublicKey(): Promise<KeyObject> {
-    const [publicKey] = await this.kmsClient.getPublicKey({
-      name: this.kmsClient.cryptoKeyVersionPath(
-        this.projectId,
-        this.locationId,
-        this.keyringId,
-        this.keyId,
-        this.versionId
+    const [publicKey] = await this.#kmsClient.getPublicKey({
+      name: this.#kmsClient.cryptoKeyVersionPath(
+        this.#projectId,
+        this.#locationId,
+        this.#keyringId,
+        this.#keyId,
+        this.#versionId
       ),
     });
     if (typeof publicKey.pem === 'string') {
