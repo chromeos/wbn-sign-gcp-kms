@@ -18,8 +18,10 @@ import { KeyManagementServiceClient } from '@google-cloud/kms';
 import { ISigningStrategy } from 'wbn-sign/lib/wbn-sign';
 import { KeyObject, createPublicKey, createHash } from 'crypto';
 
+/**
+ * Google Cloud Platform KMS based implementation of the ISigningStrategy.
+ */
 export class GCPWbnSigner implements ISigningStrategy {
-  // private kmsClient: KeyManagementServiceClient;
   #kmsClient;
   #projectId;
   #locationId;
@@ -27,6 +29,16 @@ export class GCPWbnSigner implements ISigningStrategy {
   #keyId;
   #versionId;
 
+  
+  /**
+   * Constructs a new GCPWbnSigner.
+   * @param {string} projectId The ID of the Google Cloud project.
+   * @param {string} locationId The location of the key.
+   * @param {string} keyringId The ID of the keyring.
+   * @param {string} keyId The ID of the key.
+   * @param {string} versionId The version of the key.
+   * @param {KeyManagementServiceClient} [kmsClient] Optional pre-constructed KeyManagementServiceClient - to be used for testing only.
+   */
   constructor(
     projectId: string,
     locationId: string,
@@ -43,6 +55,11 @@ export class GCPWbnSigner implements ISigningStrategy {
     this.#versionId = versionId;
   }
 
+  /**
+   * Signs the given data using the Google Cloud KMS service.
+   * @param {Uint8Array} data The data to sign.
+   * @returns {Promise<Uint8Array>} A promise that resolves with the signature.
+   */
   async sign(data: Uint8Array): Promise<Uint8Array> {
     const [response] = await this.#kmsClient.asymmetricSign({
       name: this.#kmsClient.cryptoKeyVersionPath(
@@ -63,6 +80,10 @@ export class GCPWbnSigner implements ISigningStrategy {
     throw new Error('No signature in response!');
   }
 
+  /**
+   * Gets the public key from the Google Cloud KMS service.
+   * @returns {Promise<KeyObject>} A promise that resolves with the public key.
+   */
   async getPublicKey(): Promise<KeyObject> {
     const [publicKey] = await this.#kmsClient.getPublicKey({
       name: this.#kmsClient.cryptoKeyVersionPath(
