@@ -47,7 +47,29 @@ describe('cli-tools', () => {
         },
       ]);
     });
-  });
+
+    it('should fail correctly if key file nonexistent', () => {
+      const argv = [
+        '',
+        '',
+        '--key-id-json',
+        'nonexistent.json',
+      ];
+
+      expect(() => getDumpIdArgs(argv)).toThrowError('ENOENT: no such file or directory, open \'nonexistent.json\'');
+    });
+
+    it('should fail correctly if key file invalid', () => {
+      const argv = [
+        '',
+        '',
+        '--key-id-json',
+        'tests/assets/key_invalid.json',
+      ];
+
+      expect(() => getDumpIdArgs(argv)).toThrowError('Unexpected end of JSON input');
+    });
+ });
 
   describe('getSignArgs', () => {
     it('should parse all required and optional arguments from command line', () => {

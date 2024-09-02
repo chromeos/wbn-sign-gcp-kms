@@ -17,12 +17,28 @@
 import { Command, OptionValues } from 'commander';
 import { readFileSync } from 'fs';
 
-function collectKeyIds(value: string, previous: any[]) {
-  const keyInfo = JSON.parse(readFileSync(value, 'utf-8'));
-  previous.push(keyInfo);
+/**
+ * @param {string} filename The path to the JSON file containing key ID information.
+ * @param {any[]} previous The array to append the key ID information to.
+ * @returns {any[]} The array with the key ID information appended.
+ */
+function collectKeyIds(filename: string, previous: any[]) {
+  try {
+    const fileContents: string = readFileSync(filename, 'utf-8')
+    const keyInfo = JSON.parse(fileContents);
+    previous.push(keyInfo);
+  } catch (e) {
+    console.error(`Could not parse or open key ID JSON file: ${filename}`);
+    throw e;
+  }
   return previous;
 }
 
+/**
+ * Parses the command line arguments for the dump-id command.
+ * @param {string[]} argv The command line arguments.
+ * @returns {OptionValues} The parsed command line arguments.
+ */
 export function getDumpIdArgs(argv: string[]): OptionValues {
   const program = new Command();
   return program
@@ -36,6 +52,11 @@ export function getDumpIdArgs(argv: string[]): OptionValues {
     .opts();
 }
 
+/**
+ * Parses the command line arguments for the sign command.
+ * @param {string[]} argv The command line arguments.
+ * @returns {OptionValues} The parsed command line arguments.
+ */
 export function getSignArgs(argv: string[]): OptionValues {
   const program = new Command();
   return program
@@ -47,9 +68,10 @@ export function getSignArgs(argv: string[]): OptionValues {
       '--output <output-file>',
       'The path to save the signed web bundle file.'
     )
-    .requiredOption(
+    .option(
       '--web-bundle-id <bundle-id>',
-      'Signed Web Bundle ID associated with the bundle.'
+      'Signed Web Bundle ID associated with the bundle.',
+      undefined
     )
     .option(
       '--key-id-json <key-id-json>',
@@ -60,3 +82,4 @@ export function getSignArgs(argv: string[]): OptionValues {
     .parse(argv)
     .opts();
 }
+
