@@ -17,8 +17,9 @@
     "lint": "npx prettier --write src/ tests/ bin/ README.md --ignore-unknown --config ./package.json"
   },
   "bin": {
-    "wbn-sign-gcp-kms": "./bin/wbn-sign-gcp-kms.js",
-    "wbn-dump-id-gcp-kms": "./bin/wbn-dump-id-gcp-kms.js"
+    "wbn-gcp-kms": "./bin/wbn-gcp-kms.js",
+    "wbn-gcp-kms-sign": "./bin/wbn-gcp-kms-sign.js",
+    "wbn-gcp-kms-get-ids": "./bin/wbn-gcp-kms-get-ids.js"
   },
   "author": "Luke Klimek <zgroza@google.com> (https://github.com/zgroza)",
   "license": "Apache-2.0",

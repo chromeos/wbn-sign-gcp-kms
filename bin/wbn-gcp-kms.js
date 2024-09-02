@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Copyright 2024 Google LLC
  *
@@ -14,16 +15,6 @@
  * limitations under the License.
  */
 
-import { signBundle } from '../wbn-sign-gcp-kms.js';
-import * as fs from 'fs';
-import { getSignArgs } from './cli-tools.js';
+import { wbnGcpKmpSubcommands } from '../lib/cli/cli-tools.js';
 
-/**
- * Main function for the sign command.
- */
-export async function signMain() {
-  const { input, output, webBundleId, keyIdJson } = getSignArgs(process.argv);
-  const webBundle = fs.readFileSync(input);
-  const signedWebBundle = await signBundle(webBundle, keyIdJson, webBundleId);
-  fs.writeFileSync(output, signedWebBundle);
-}
+await wbnGcpKmpSubcommands(process.argv);

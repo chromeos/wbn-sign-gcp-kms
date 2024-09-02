@@ -14,25 +14,9 @@
  * limitations under the License.
  */
 
-import { GCPWbnSigner } from '../wbn-sign-gcp-kms.js';
-import * as wbnSign from 'wbn-sign';
-import { getDumpIdArgs } from './cli-tools.js';
+import { getWebBundleIds } from '../wbn-sign-gcp-kms.js';
+import { getGetIdsArgs } from './cli-tools.js';
 
-export async function dumpIdMain() {
-  for (const keyInfo of getDumpIdArgs(process.argv).keyIdJson) {
-    const { project, location, keyring, key, version } = keyInfo;
-    console.log('For:', keyInfo);
-    console.log(
-      'Web bundle id:',
-      new wbnSign.WebBundleId(
-        await new GCPWbnSigner({
-          project,
-          location,
-          keyring,
-          key,
-          version,
-        }).getPublicKey()
-      ).serialize()
-    );
-  }
+export async function getIdsMain() {
+  console.log(await getWebBundleIds(getGetIdsArgs(process.argv).keyIdJson));
 }

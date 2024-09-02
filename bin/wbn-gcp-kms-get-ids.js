@@ -15,6 +15,6 @@
  * limitations under the License.
  */
 
-import {dumpIdMain} from '../lib/cli/wbn-dump-id-gcp-kms-cli.js'
+import { getIdsMain } from '../lib/cli/wbn-get-ids-gcp-kms-cli.js';
 
-await dumpIdMain();
+await getIdsMain();

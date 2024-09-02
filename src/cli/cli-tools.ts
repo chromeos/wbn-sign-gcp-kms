@@ -16,6 +16,8 @@
 
 import { Command, OptionValues } from 'commander';
 import { readFileSync } from 'fs';
+import { signMain } from './wbn-sign-gcp-kms-cli.js';
+import { getIdsMain } from './wbn-get-ids-gcp-kms-cli.js';
 
 /**
  * @param {string} filename The path to the JSON file containing key ID information.
@@ -39,11 +41,11 @@ function collectKeyIds(filename: string, previous: any[]) {
  * @param {string[]} argv The command line arguments.
  * @returns {OptionValues} The parsed command line arguments.
  */
-export function getDumpIdArgs(argv: string[]): OptionValues {
+export function getGetIdsArgs(argv: string[]): OptionValues {
   const program = new Command();
   return program
     .option(
-      '--key-id-json <key-id-json>',
+      '-k, --key-id-json <key-id-json>',
       'The path to a JSON file containing key ID information.',
       collectKeyIds,
       []
@@ -61,24 +63,33 @@ export function getSignArgs(argv: string[]): OptionValues {
   const program = new Command();
   return program
     .requiredOption(
-      '--input <input-file>',
+      '-i, --input <input-file>',
       'The path to the input web bundle file.'
     )
     .requiredOption(
-      '--output <output-file>',
+      '-o, --output <output-file>',
       'The path to save the signed web bundle file.'
     )
     .option(
-      '--web-bundle-id <bundle-id>',
+      '-w, --web-bundle-id <bundle-id>',
       'Signed Web Bundle ID associated with the bundle.',
       undefined
     )
     .option(
-      '--key-id-json <key-id-json>',
+      '-k, --key-id-json <key-id-json>',
       'The path to a JSON file containing key ID information.',
       collectKeyIds,
       []
     )
     .parse(argv)
     .opts();
+}
+
+export function wbnGcpKmpSubcommands(argv: string[]) {
+  const program = new Command();
+  program.name('wbn-gcp-kms');
+  program
+    .command('sign', 'Sign a web bundle using GCP KMS.')
+    .command('get-ids', 'Get the web bundle IDs for a set of key IDs.')
+    .parse(argv);
 }

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { getDumpIdArgs, getSignArgs } from '../lib/cli/cli-tools.js';
+import { getGetIdsArgs, getSignArgs } from '../lib/cli/cli-tools.js';
 
 describe('cli-tools', () => {
-  describe('getDumpIdArgs', () => {
+  describe('getGetIdsArgs', () => {
     it('should parse key ID JSON file paths from command line arguments', () => {
       const argv = [
         '',
@@ -28,7 +28,7 @@ describe('cli-tools', () => {
         'tests/assets/key2.json',
       ];
 
-      const options = getDumpIdArgs(argv);
+      const options = getGetIdsArgs(argv);
 
       expect(options.keyIdJson).toEqual([
         {
@@ -49,27 +49,21 @@ describe('cli-tools', () => {
     });
 
     it('should fail correctly if key file nonexistent', () => {
-      const argv = [
-        '',
-        '',
-        '--key-id-json',
-        'nonexistent.json',
-      ];
+      const argv = ['', '', '--key-id-json', 'nonexistent.json'];
 
-      expect(() => getDumpIdArgs(argv)).toThrowError('ENOENT: no such file or directory, open \'nonexistent.json\'');
+      expect(() => getGetIdsArgs(argv)).toThrowError(
+        "ENOENT: no such file or directory, open 'nonexistent.json'"
+      );
     });
 
     it('should fail correctly if key file invalid', () => {
-      const argv = [
-        '',
-        '',
-        '--key-id-json',
-        'tests/assets/key_invalid.json',
-      ];
+      const argv = ['', '', '--key-id-json', 'tests/assets/key_invalid.json'];
 
-      expect(() => getDumpIdArgs(argv)).toThrowError('Unexpected end of JSON input');
+      expect(() => getGetIdsArgs(argv)).toThrowError(
+        'Unexpected end of JSON input'
+      );
     });
- });
+  });
 
   describe('getSignArgs', () => {
     it('should parse all required and optional arguments from command line', () => {

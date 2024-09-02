@@ -32,6 +32,13 @@ export interface GCPKeyInfo {
 }
 
 /**
+ * Represents the key information with added web bundle ID.
+ */
+export interface GCPKeyInfoWithBundleId extends GCPKeyInfo {
+  webBundleId: string;
+}
+
+/**
  * Google Cloud Platform KMS based implementation of the ISigningStrategy.
  */
 export class GCPWbnSigner implements ISigningStrategy {
@@ -106,6 +113,9 @@ export async function signBundle(
   keyInfos: GCPKeyInfo[],
   webBundleId: string | undefined = undefined
 ): Promise<Uint8Array> {
+  if (keyInfos.length === 0) {
+    throw new Error('No key IDs provided!');
+  }
   const signers = await Promise.all(
     keyInfos.map(async (keyInfo) => {
       const signer = new GCPWbnSigner(keyInfo);
@@ -117,10 +127,32 @@ export async function signBundle(
       };
     })
   );
+  if (webBundleId === undefined) {
+    console.log(
+      'No Web Bundle Id provided, will deduct it from the first key:',
+      { ...keyInfos[0], webBundleId: signers[0].webBundleId }
+    );
+  }
   const { signedWebBundle } = await new wbnSign.IntegrityBlockSigner(
     webBundle,
     webBundleId || signers[0].webBundleId,
     signers.map(({ signer }) => signer)
   ).sign();
   return signedWebBundle;
+}
+
+export async function getWebBundleIds(
+  keyInfos: GCPKeyInfo[]
+): Promise<GCPKeyInfoWithBundleId[]> {
+  return Promise.all(
+    keyInfos.map(async (keyInfo) => {
+      const signer = new GCPWbnSigner(keyInfo);
+      return {
+        ...keyInfo,
+        webBundleId: new wbnSign.WebBundleId(
+          await signer.getPublicKey()
+        ).serialize(),
+      };
+    })
+  );
 }
