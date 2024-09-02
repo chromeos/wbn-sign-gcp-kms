@@ -24,7 +24,7 @@ import { readFileSync } from 'fs';
  */
 function collectKeyIds(filename: string, previous: any[]) {
   try {
-    const fileContents: string = readFileSync(filename, 'utf-8')
+    const fileContents: string = readFileSync(filename, 'utf-8');
     const keyInfo = JSON.parse(fileContents);
     previous.push(keyInfo);
   } catch (e) {
@@ -82,4 +82,3 @@ export function getSignArgs(argv: string[]): OptionValues {
     .parse(argv)
     .opts();
 }
-

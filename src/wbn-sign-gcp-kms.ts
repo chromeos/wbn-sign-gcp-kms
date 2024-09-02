@@ -16,43 +16,36 @@
 
 import { KeyManagementServiceClient } from '@google-cloud/kms';
 import { ISigningStrategy } from 'wbn-sign/lib/wbn-sign';
+import * as wbnSign from 'wbn-sign';
 import { KeyObject, createPublicKey, createHash } from 'crypto';
+
+/**
+ * Represents the key ID information for a Google Cloud KMS key.
+ * Mandatory fields: project, location, keyring, key, version.
+ */
+export interface GCPKeyInfo {
+  project: string;
+  location: string;
+  keyring: string;
+  key: string;
+  version: string;
+}
 
 /**
  * Google Cloud Platform KMS based implementation of the ISigningStrategy.
  */
 export class GCPWbnSigner implements ISigningStrategy {
-  #kmsClient;
-  #projectId;
-  #locationId;
-  #keyringId;
-  #keyId;
-  #versionId;
+  #kmsClient: KeyManagementServiceClient;
+  #keyInfo: GCPKeyInfo;
 
-  
   /**
    * Constructs a new GCPWbnSigner.
-   * @param {string} projectId The ID of the Google Cloud project.
-   * @param {string} locationId The location of the key.
-   * @param {string} keyringId The ID of the keyring.
-   * @param {string} keyId The ID of the key.
-   * @param {string} versionId The version of the key.
+   * @param {GCPKeyInfo} keyInfo The key ID information.
    * @param {KeyManagementServiceClient} [kmsClient] Optional pre-constructed KeyManagementServiceClient - to be used for testing only.
    */
-  constructor(
-    projectId: string,
-    locationId: string,
-    keyringId: string,
-    keyId: string,
-    versionId: string,
-    kmsClient?: KeyManagementServiceClient
-  ) {
+  constructor(keyInfo: GCPKeyInfo, kmsClient?: KeyManagementServiceClient) {
     this.#kmsClient = kmsClient || new KeyManagementServiceClient();
-    this.#projectId = projectId;
-    this.#locationId = locationId;
-    this.#keyringId = keyringId;
-    this.#keyId = keyId;
-    this.#versionId = versionId;
+    this.#keyInfo = keyInfo;
   }
 
   /**
@@ -63,11 +56,11 @@ export class GCPWbnSigner implements ISigningStrategy {
   async sign(data: Uint8Array): Promise<Uint8Array> {
     const [response] = await this.#kmsClient.asymmetricSign({
       name: this.#kmsClient.cryptoKeyVersionPath(
-        this.#projectId,
-        this.#locationId,
-        this.#keyringId,
-        this.#keyId,
-        this.#versionId
+        this.#keyInfo.project,
+        this.#keyInfo.location,
+        this.#keyInfo.keyring,
+        this.#keyInfo.key,
+        this.#keyInfo.version
       ),
       digest: {
         sha256: createHash('sha256').update(data).digest(),
@@ -87,11 +80,11 @@ export class GCPWbnSigner implements ISigningStrategy {
   async getPublicKey(): Promise<KeyObject> {
     const [publicKey] = await this.#kmsClient.getPublicKey({
       name: this.#kmsClient.cryptoKeyVersionPath(
-        this.#projectId,
-        this.#locationId,
-        this.#keyringId,
-        this.#keyId,
-        this.#versionId
+        this.#keyInfo.project,
+        this.#keyInfo.location,
+        this.#keyInfo.keyring,
+        this.#keyInfo.key,
+        this.#keyInfo.version
       ),
     });
     if (typeof publicKey.pem === 'string') {
@@ -99,4 +92,35 @@ export class GCPWbnSigner implements ISigningStrategy {
     }
     throw new Error('No public key in response!');
   }
+}
+
+/**
+ * Signs a web bundle using a list of Google Cloud KMS keys.
+ * @param {Uint8Array} webBundle The web bundle to sign.
+ * @param {GCPKeyInfo[]} keyInfos The list of key ID information.
+ * @param {string | undefined} [webBundleId] The web bundle ID to use (if not provided, bundle ID will be automatically generated from the first key).
+ * @returns {Promise<Uint8Array>} A promise that resolves with the signed web bundle.
+ */
+export async function signBundle(
+  webBundle: Uint8Array,
+  keyInfos: GCPKeyInfo[],
+  webBundleId: string | undefined = undefined
+): Promise<Uint8Array> {
+  const signers = await Promise.all(
+    keyInfos.map(async (keyInfo) => {
+      const signer = new GCPWbnSigner(keyInfo);
+      return {
+        signer,
+        webBundleId: new wbnSign.WebBundleId(
+          await signer.getPublicKey()
+        ).serialize(),
+      };
+    })
+  );
+  const { signedWebBundle } = await new wbnSign.IntegrityBlockSigner(
+    webBundle,
+    webBundleId || signers[0].webBundleId,
+    signers.map(({ signer }) => signer)
+  ).sign();
+  return signedWebBundle;
 }

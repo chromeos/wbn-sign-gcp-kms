@@ -25,13 +25,13 @@ export async function dumpIdMain() {
     console.log(
       'Web bundle id:',
       new wbnSign.WebBundleId(
-        await new GCPWbnSigner(
+        await new GCPWbnSigner({
           project,
           location,
           keyring,
           key,
-          version
-        ).getPublicKey()
+          version,
+        }).getPublicKey()
       ).serialize()
     );
   }

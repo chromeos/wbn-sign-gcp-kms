@@ -41,11 +41,13 @@ describe('GCPWbnSigner', () => {
     };
 
     signer = new GCPWbnSigner(
-      'projectId',
-      'locationId',
-      'keyringId',
-      'keyId',
-      'versionId',
+      {
+        project: 'projectId',
+        location: 'locationId',
+        keyring: 'keyringId',
+        key: 'keyId',
+        version: 'versionId',
+      },
       mockKmsClient
     );
   });

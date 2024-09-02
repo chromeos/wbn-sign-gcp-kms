@@ -14,26 +14,17 @@
  * limitations under the License.
  */
 
-import { GCPWbnSigner } from '../wbn-sign-gcp-kms.js';
+import { GCPWbnSigner, signBundle } from '../wbn-sign-gcp-kms.js';
 import * as fs from 'fs';
 import * as wbnSign from 'wbn-sign';
 import { getSignArgs } from './cli-tools.js';
 
+/**
+ * Main function for the sign command.
+ */
 export async function signMain() {
   const { input, output, webBundleId, keyIdJson } = getSignArgs(process.argv);
-  
   const webBundle = fs.readFileSync(input);
-  
-  const signers = keyIdJson.map((keyInfo: { project: string; location: string; keyring: string; key: string; version: string; }) => {
-    const { project, location, keyring, key, version } = keyInfo;
-    return new GCPWbnSigner(project, location, keyring, key, version);
-  });
-  
-  const { signedWebBundle } = await new wbnSign.IntegrityBlockSigner(
-    webBundle,
-    webBundleId,
-    signers
-  ).sign();
-  
+  const signedWebBundle = await signBundle(webBundle, keyIdJson, webBundleId);
   fs.writeFileSync(output, signedWebBundle);
 }
