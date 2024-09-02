@@ -60,6 +60,35 @@ the purpose of
 [GCP KMS Node.js API](https://cloud.google.com/nodejs/docs/reference/kms/latest),
 this will give you the signed web bundle.
 
+You can also get the web bundle IDs of your keys using a helper function:
+
+```js
+import { getWebBundleIds } from 'wbn-sign-gcp-kms';
+
+...
+
+const keyIdsWithBundleIds = await getWebBundleIds(
+  [
+    {
+      project: projectId,
+      location: locationId,
+      keyring: keyringId,
+      key: keyId,
+      version: versionId
+    },
+    {
+      project: projectId2,
+      location: locationId2,
+      keyring: keyringId2,
+      key: keyId2,
+      version: versionId2
+    }
+  ]
+)
+```
+
+This will return `GCPKeyInfoWithBundleId[]` for the provided keys.
+
 ### CLI
 
 Example of signing:
