@@ -15,6 +15,6 @@
  * limitations under the License.
  */
 
-import {signMain} from '../lib/cli/wbn-sign-gcp-kms-cli.js'
+import { signMain } from '../lib/cli/wbn-sign-gcp-kms-cli.js';
 
 await signMain();

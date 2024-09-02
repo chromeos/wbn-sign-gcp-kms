@@ -141,6 +141,11 @@ export async function signBundle(
   return signedWebBundle;
 }
 
+/**
+ * Gets the web bundle IDs for a list of Google Cloud KMS keys.
+ * @param {GCPKeyInfo[]} keyInfos The list of key ID information.
+ * @returns {Promise<GCPKeyInfoWithBundleId[]>} A promise that resolves with the list of key ID information with the web bundle IDs.
+ */
 export async function getWebBundleIds(
   keyInfos: GCPKeyInfo[]
 ): Promise<GCPKeyInfoWithBundleId[]> {

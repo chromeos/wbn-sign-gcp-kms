@@ -85,6 +85,9 @@ export function getSignArgs(argv: string[]): OptionValues {
     .opts();
 }
 
+/**
+ * Main function for the wbn-gcp-kms command. Directs to subcommands `sign` and `get-ids`.
+ */
 export function wbnGcpKmpSubcommands(argv: string[]) {
   const program = new Command();
   program.name('wbn-gcp-kms');

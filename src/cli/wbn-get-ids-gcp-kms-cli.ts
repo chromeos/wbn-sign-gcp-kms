@@ -17,6 +17,9 @@
 import { getWebBundleIds } from '../wbn-sign-gcp-kms.js';
 import { getGetIdsArgs } from './cli-tools.js';
 
+/**
+ * Main function for the get-ids command.
+ */
 export async function getIdsMain() {
   console.log(await getWebBundleIds(getGetIdsArgs(process.argv).keyIdJson));
 }
