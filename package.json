@@ -21,6 +21,10 @@
     "wbn-gcp-kms-sign": "./bin/wbn-gcp-kms-sign.js",
     "wbn-gcp-kms-get-ids": "./bin/wbn-gcp-kms-get-ids.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chromeos/wbn-sign-gcp-kms"
+  },
   "author": "Luke Klimek <zgroza@google.com> (https://github.com/zgroza)",
   "license": "Apache-2.0",
   "dependencies": {
