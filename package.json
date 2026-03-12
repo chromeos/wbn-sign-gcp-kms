@@ -1,6 +1,6 @@
 {
   "name": "wbn-sign-gcp-kms",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Tool for signing a web bundle using GCP KMS",
   "main": "./lib/wbn-sign-gcp-kms.cjs",
   "type": "module",
@@ -29,7 +29,7 @@
   "author": "Luke Klimek <zgroza@google.com> (https://github.com/zgroza)",
   "license": "Apache-2.0",
   "dependencies": {
-    "@google-cloud/kms": "^5.2.1",
+    "@google-cloud/kms": "^4.5.0",
     "commander": "^14.0.2",
     "read": "^5.0.1",
     "wbn-sign": "^0.2.5"
