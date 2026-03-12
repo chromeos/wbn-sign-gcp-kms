@@ -52,7 +52,7 @@ describe('cli-tools', () => {
       const argv = ['', '', '--key-id-json', 'nonexistent.json'];
 
       expect(() => getGetIdsArgs(argv)).toThrowError(
-        "ENOENT: no such file or directory, open 'nonexistent.json'"
+        "ENOENT: no such file or directory, open 'nonexistent.json'",
       );
     });
 
@@ -60,7 +60,7 @@ describe('cli-tools', () => {
       const argv = ['', '', '--key-id-json', 'tests/assets/key_invalid.json'];
 
       expect(() => getGetIdsArgs(argv)).toThrowError(
-        'Unexpected end of JSON input'
+        'Unexpected end of JSON input',
       );
     });
   });

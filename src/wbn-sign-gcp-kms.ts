@@ -17,7 +17,7 @@
 import { KeyManagementServiceClient } from '@google-cloud/kms';
 import { ISigningStrategy } from 'wbn-sign/lib/wbn-sign';
 import * as wbnSign from 'wbn-sign';
-import { KeyObject, createPublicKey, createHash } from 'crypto';
+import { KeyObject, createPublicKey } from 'crypto';
 
 /**
  * Represents the key ID information for a Google Cloud KMS key.
@@ -67,11 +67,9 @@ export class GCPWbnSigner implements ISigningStrategy {
         this.#keyInfo.location,
         this.#keyInfo.keyring,
         this.#keyInfo.key,
-        this.#keyInfo.version
+        this.#keyInfo.version,
       ),
-      digest: {
-        sha256: createHash('sha256').update(data).digest(),
-      },
+      data: data,
     });
 
     if (response.signature instanceof Uint8Array) {
@@ -91,7 +89,7 @@ export class GCPWbnSigner implements ISigningStrategy {
         this.#keyInfo.location,
         this.#keyInfo.keyring,
         this.#keyInfo.key,
-        this.#keyInfo.version
+        this.#keyInfo.version,
       ),
     });
     if (typeof publicKey.pem === 'string') {
@@ -111,7 +109,7 @@ export class GCPWbnSigner implements ISigningStrategy {
 export async function signBundle(
   webBundle: Uint8Array,
   keyInfos: GCPKeyInfo[],
-  webBundleId: string | undefined = undefined
+  webBundleId: string | undefined = undefined,
 ): Promise<Uint8Array> {
   if (keyInfos.length === 0) {
     throw new Error('No key IDs provided!');
@@ -122,21 +120,21 @@ export async function signBundle(
       return {
         signer,
         webBundleId: new wbnSign.WebBundleId(
-          await signer.getPublicKey()
+          await signer.getPublicKey(),
         ).serialize(),
       };
-    })
+    }),
   );
   if (webBundleId === undefined) {
     console.log(
       'No Web Bundle Id provided, will deduct it from the first key:',
-      { ...keyInfos[0], webBundleId: signers[0].webBundleId }
+      { ...keyInfos[0], webBundleId: signers[0].webBundleId },
     );
   }
   const { signedWebBundle } = await new wbnSign.IntegrityBlockSigner(
     webBundle,
     webBundleId || signers[0].webBundleId,
-    signers.map(({ signer }) => signer)
+    signers.map(({ signer }) => signer),
   ).sign();
   return signedWebBundle;
 }
@@ -147,7 +145,7 @@ export async function signBundle(
  * @returns {Promise<GCPKeyInfoWithBundleId[]>} A promise that resolves with the list of key ID information with the web bundle IDs.
  */
 export async function getWebBundleIds(
-  keyInfos: GCPKeyInfo[]
+  keyInfos: GCPKeyInfo[],
 ): Promise<GCPKeyInfoWithBundleId[]> {
   return Promise.all(
     keyInfos.map(async (keyInfo) => {
@@ -155,9 +153,9 @@ export async function getWebBundleIds(
       return {
         ...keyInfo,
         webBundleId: new wbnSign.WebBundleId(
-          await signer.getPublicKey()
+          await signer.getPublicKey(),
         ).serialize(),
       };
-    })
+    }),
   );
 }

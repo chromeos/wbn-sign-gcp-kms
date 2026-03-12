@@ -1,6 +1,6 @@
 {
   "name": "wbn-sign-gcp-kms",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Tool for signing a web bundle using GCP KMS",
   "main": "./lib/wbn-sign-gcp-kms.cjs",
   "type": "module",
@@ -14,6 +14,7 @@
     "build:esm": "tsc",
     "build:cjs": "esbuild --bundle --format=cjs --external:cborg --outfile=lib/wbn-sign-gcp-kms.cjs src/wbn-sign-gcp-kms.ts --platform=node",
     "test": "jasmine tests/*.js tests/*.cjs",
+    "test:manual": "node manual_tests/verify_signature.js",
     "lint": "npx prettier --write src/ tests/ bin/ README.md --ignore-unknown --config ./package.json"
   },
   "bin": {
@@ -28,18 +29,18 @@
   "author": "Luke Klimek <zgroza@google.com> (https://github.com/zgroza)",
   "license": "Apache-2.0",
   "dependencies": {
-    "@google-cloud/kms": "^4.5.0",
-    "commander": "^7.0.0",
-    "read": "^2.0.0",
-    "wbn-sign": "0.2.1"
+    "@google-cloud/kms": "^5.2.1",
+    "commander": "^14.0.2",
+    "read": "^5.0.1",
+    "wbn-sign": "^0.2.5"
   },
   "devDependencies": {
-    "@types/fast-crc32c": "^2.0.2",
-    "@types/node": "^16.0.0",
-    "esbuild": "^0.25.0",
-    "prettier": "2.8.0",
-    "typescript": "^4.9.5",
-    "jasmine": "^5.2.0"
+    "@types/fast-crc32c": "^2.0.3",
+    "@types/node": "^25.0.7",
+    "esbuild": "^0.27.2",
+    "jasmine": "^5.13.0",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">= 16.0.0",
