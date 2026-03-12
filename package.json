@@ -1,6 +1,6 @@
 {
   "name": "wbn-sign-gcp-kms",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Tool for signing a web bundle using GCP KMS",
   "main": "./lib/wbn-sign-gcp-kms.cjs",
   "type": "module",
@@ -12,7 +12,7 @@
   "scripts": {
     "build": "npm run build:esm && npm run build:cjs",
     "build:esm": "tsc",
-    "build:cjs": "esbuild --bundle --format=cjs --external:cborg --outfile=lib/wbn-sign-gcp-kms.cjs src/wbn-sign-gcp-kms.ts --platform=node",
+    "build:cjs": "esbuild --bundle --format=cjs --outfile=lib/wbn-sign-gcp-kms.cjs src/wbn-sign-gcp-kms.ts --platform=node",
     "test": "jasmine tests/*.js tests/*.cjs",
     "test:manual": "node manual_tests/verify_signature.js",
     "lint": "npx prettier --write src/ tests/ bin/ README.md --ignore-unknown --config ./package.json"
