@@ -48,7 +48,7 @@ export function getGetIdsArgs(argv: string[]): OptionValues {
       '-k, --key-id-json <key-id-json>',
       'The path to a JSON file containing key ID information.',
       collectKeyIds,
-      []
+      [],
     )
     .parse(argv)
     .opts();
@@ -64,22 +64,22 @@ export function getSignArgs(argv: string[]): OptionValues {
   return program
     .requiredOption(
       '-i, --input <input-file>',
-      'The path to the input web bundle file.'
+      'The path to the input web bundle file.',
     )
     .requiredOption(
       '-o, --output <output-file>',
-      'The path to save the signed web bundle file.'
+      'The path to save the signed web bundle file.',
     )
     .option(
       '-w, --web-bundle-id <bundle-id>',
       'Signed Web Bundle ID associated with the bundle.',
-      undefined
+      undefined,
     )
     .option(
       '-k, --key-id-json <key-id-json>',
       'The path to a JSON file containing key ID information.',
       collectKeyIds,
-      []
+      [],
     )
     .parse(argv)
     .opts();

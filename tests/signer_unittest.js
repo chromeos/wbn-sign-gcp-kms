@@ -48,7 +48,7 @@ describe('GCPWbnSigner', () => {
         key: 'keyId',
         version: 'versionId',
       },
-      mockKmsClient
+      mockKmsClient,
     );
   });
 
@@ -66,13 +66,11 @@ describe('GCPWbnSigner', () => {
       'locationId',
       'keyringId',
       'keyId',
-      'versionId'
+      'versionId',
     );
     expect(mockKmsClient.asymmetricSign).toHaveBeenCalledWith({
       name: 'path/to/key/version',
-      digest: {
-        sha256: jasmine.any(Buffer),
-      },
+      data: testData,
     });
   });
 
@@ -80,7 +78,7 @@ describe('GCPWbnSigner', () => {
     mockKmsClient.asymmetricSign.and.rejectWith(new Error('Signing failed'));
 
     await expectAsync(signer.sign(new Uint8Array())).toBeRejectedWithError(
-      'Signing failed'
+      'Signing failed',
     );
   });
 
@@ -88,7 +86,7 @@ describe('GCPWbnSigner', () => {
     mockKmsClient.asymmetricSign.and.returnValue([{ not_signature: true }]);
 
     await expectAsync(signer.sign(new Uint8Array())).toBeRejectedWithError(
-      'No signature in response!'
+      'No signature in response!',
     );
   });
 
@@ -104,7 +102,7 @@ describe('GCPWbnSigner', () => {
       'locationId',
       'keyringId',
       'keyId',
-      'versionId'
+      'versionId',
     );
     expect(mockKmsClient.getPublicKey).toHaveBeenCalledWith({
       name: 'path/to/key/version',
@@ -113,11 +111,11 @@ describe('GCPWbnSigner', () => {
 
   it('should throw error when getting public key fails', async () => {
     mockKmsClient.getPublicKey.and.rejectWith(
-      new Error('Get Public Key failed')
+      new Error('Get Public Key failed'),
     );
 
     await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
-      'Get Public Key failed'
+      'Get Public Key failed',
     );
   });
 
@@ -125,7 +123,7 @@ describe('GCPWbnSigner', () => {
     mockKmsClient.getPublicKey.and.returnValue([{ not_pem: true }]);
 
     await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
-      'No public key in response!'
+      'No public key in response!',
     );
   });
 });

@@ -3,3 +3,4 @@ lib
 *.wbn
 *.swbn
 .vscode
+manual_tests/*.json
