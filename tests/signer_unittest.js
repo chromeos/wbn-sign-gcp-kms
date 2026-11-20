@@ -15,7 +15,10 @@
  */
 
 import { GCPWbnSigner } from '../lib/wbn-sign-gcp-kms.js';
+import { crc32c } from '../lib/crc32c.js';
 import { createPublicKey } from 'crypto';
+
+const KEY_VERSION_NAME = 'path/to/key/version';
 
 const TEST_PUBLIC_KEY =
   '-----BEGIN PUBLIC KEY-----\n' +
@@ -23,16 +26,29 @@ const TEST_PUBLIC_KEY =
   'x2BDh0PZ7t09Epz55kv+/tJq4n9Lty8GJ5rm9povD3My/dz5Vkd7JA==\n' +
   '-----END PUBLIC KEY-----\n';
 
+function makeSignResponse(signature, overrides = {}) {
+  return {
+    signature,
+    signatureCrc32c: { value: String(crc32c(signature)) },
+    verifiedDataCrc32c: true,
+    name: KEY_VERSION_NAME,
+    ...overrides,
+  };
+}
+
 describe('GCPWbnSigner', () => {
   let signer;
   let mockKmsClient;
 
   beforeEach(() => {
+    const defaultSignature = new Uint8Array([4, 5, 6]);
     mockKmsClient = {
-      cryptoKeyVersionPath: jasmine.createSpy('cryptoKeyVersionPath'),
+      cryptoKeyVersionPath: jasmine
+        .createSpy('cryptoKeyVersionPath')
+        .and.returnValue(KEY_VERSION_NAME),
       asymmetricSign: jasmine
         .createSpy('asymmetricSign')
-        .and.resolveTo([{ signature: new Uint8Array([4, 5, 6]) }]),
+        .and.resolveTo([makeSignResponse(defaultSignature)]),
       getPublicKey: jasmine.createSpy('getPublicKey').and.resolveTo([
         {
           pem: TEST_PUBLIC_KEY,
@@ -52,11 +68,9 @@ describe('GCPWbnSigner', () => {
     );
   });
 
-  it('should sign data', async () => {
+  it('should sign data and send dataCrc32c', async () => {
     const testData = new Uint8Array([1, 2, 3]);
     const expectedSignature = new Uint8Array([4, 5, 6]);
-
-    mockKmsClient.cryptoKeyVersionPath.and.returnValue('path/to/key/version');
 
     const signature = await signer.sign(testData);
 
@@ -69,8 +83,9 @@ describe('GCPWbnSigner', () => {
       'versionId',
     );
     expect(mockKmsClient.asymmetricSign).toHaveBeenCalledWith({
-      name: 'path/to/key/version',
+      name: KEY_VERSION_NAME,
       data: testData,
+      dataCrc32c: { value: crc32c(testData) },
     });
   });
 
@@ -88,6 +103,83 @@ describe('GCPWbnSigner', () => {
     await expectAsync(signer.sign(new Uint8Array())).toBeRejectedWithError(
       'No signature in response!',
     );
+  });
+
+  it('should reject asymmetricSign response with mismatched name', async () => {
+    mockKmsClient.asymmetricSign.and.resolveTo([
+      makeSignResponse(new Uint8Array([4, 5, 6]), {
+        name: 'path/to/OTHER/version',
+      }),
+    ]);
+
+    await expectAsync(
+      signer.sign(new Uint8Array([1, 2, 3])),
+    ).toBeRejectedWithError(/name mismatch/);
+  });
+
+  it('should accept numeric and Long-like signatureCrc32c values', async () => {
+    const expectedSignature = new Uint8Array([4, 5, 6]);
+    const expectedCrc = crc32c(expectedSignature);
+
+    mockKmsClient.asymmetricSign.and.resolveTo([
+      makeSignResponse(expectedSignature, {
+        signatureCrc32c: { value: expectedCrc },
+      }),
+    ]);
+    expect(await signer.sign(new Uint8Array([1, 2, 3]))).toEqual(
+      expectedSignature,
+    );
+
+    mockKmsClient.asymmetricSign.and.resolveTo([
+      makeSignResponse(expectedSignature, {
+        signatureCrc32c: { value: { toString: () => String(expectedCrc) } },
+      }),
+    ]);
+    expect(await signer.sign(new Uint8Array([1, 2, 3]))).toEqual(
+      expectedSignature,
+    );
+  });
+
+  it('should reject asymmetricSign response when verifiedDataCrc32c is not true', async () => {
+    mockKmsClient.asymmetricSign.and.resolveTo([
+      makeSignResponse(new Uint8Array([4, 5, 6]), {
+        verifiedDataCrc32c: false,
+      }),
+    ]);
+
+    await expectAsync(
+      signer.sign(new Uint8Array([1, 2, 3])),
+    ).toBeRejectedWithError(/request data CRC32C not verified/);
+
+    mockKmsClient.asymmetricSign.and.resolveTo([
+      makeSignResponse(new Uint8Array([4, 5, 6]), {
+        verifiedDataCrc32c: undefined,
+      }),
+    ]);
+
+    await expectAsync(
+      signer.sign(new Uint8Array([1, 2, 3])),
+    ).toBeRejectedWithError(/request data CRC32C not verified/);
+  });
+
+  it('should reject asymmetricSign response with mismatched or missing signatureCrc32c', async () => {
+    mockKmsClient.asymmetricSign.and.resolveTo([
+      makeSignResponse(new Uint8Array([4, 5, 6]), {
+        signatureCrc32c: { value: '0' },
+      }),
+    ]);
+    await expectAsync(
+      signer.sign(new Uint8Array([1, 2, 3])),
+    ).toBeRejectedWithError(/signature CRC32C mismatch/);
+
+    mockKmsClient.asymmetricSign.and.resolveTo([
+      makeSignResponse(new Uint8Array(0), {
+        signatureCrc32c: { value: null },
+      }),
+    ]);
+    await expectAsync(
+      signer.sign(new Uint8Array([1, 2, 3])),
+    ).toBeRejectedWithError(/signature CRC32C mismatch/);
   });
 
   it('should get public key', async () => {
