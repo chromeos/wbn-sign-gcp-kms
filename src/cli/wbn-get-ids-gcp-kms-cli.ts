@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-import { getWebBundleIds } from '../wbn-sign-gcp-kms.js';
-import { getGetIdsArgs } from './cli-tools.js';
+import { getGetIdsArgs, runGetIds } from './cli-tools.js';
 
 /**
  * Main function for the get-ids command.
  */
-export async function getIdsMain() {
-  console.log(await getWebBundleIds(getGetIdsArgs(process.argv).keyIdJson));
+export async function getIdsMain(argv: string[] = process.argv) {
+  await runGetIds(getGetIdsArgs(argv));
 }
