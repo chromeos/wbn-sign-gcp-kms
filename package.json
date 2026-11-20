@@ -39,13 +39,11 @@
   "author": "Luke Klimek <zgroza@google.com> (https://github.com/zgroza)",
   "license": "Apache-2.0",
   "dependencies": {
-    "@google-cloud/kms": "^4.5.0",
+    "@google-cloud/kms": "^6.3.0",
     "commander": "^14.0.2",
-    "read": "^5.0.1",
-    "wbn-sign": "^0.2.5"
+    "wbn-sign": "^0.3.3"
   },
   "devDependencies": {
-    "@types/fast-crc32c": "^2.0.3",
     "@types/node": "^25.0.7",
     "esbuild": "^0.27.2",
     "jasmine": "^5.13.0",
@@ -53,8 +51,8 @@
     "typescript": "^5.9.3"
   },
   "engines": {
-    "node": ">= 16.0.0",
-    "npm": ">= 8.0.0"
+    "node": ">= 22.13.0",
+    "npm": ">= 10.0.0"
   },
   "prettier": {
     "tabWidth": 2,
