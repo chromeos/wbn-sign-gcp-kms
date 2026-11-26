@@ -7,6 +7,7 @@ using [wbn-sign](https://github.com/WICG/webpackage/tree/main/js/sign) with
 
 ## Requirements
 
+- Node.js `>= 22.13.0`
 - A Google Cloud KMS asymmetric signing key version using `EC_SIGN_P256_SHA256`
   or `EC_SIGN_ED25519`
 

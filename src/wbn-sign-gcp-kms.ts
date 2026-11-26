@@ -15,7 +15,7 @@
  */
 
 import { KeyManagementServiceClient, protos } from '@google-cloud/kms';
-import { ISigningStrategy } from 'wbn-sign/lib/wbn-sign';
+import { ISigningStrategy } from 'wbn-sign';
 import * as wbnSign from 'wbn-sign';
 import { KeyObject, createPublicKey } from 'crypto';
 import { crc32c, parseCrc32cValue } from './crc32c.js';
