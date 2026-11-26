@@ -14,7 +14,19 @@
  * limitations under the License.
  */
 
-import { getGetIdsArgs, getSignArgs } from '../lib/cli/cli-tools.js';
+import {
+  createGetIdsCommand,
+  getGetIdsArgs,
+  getSignArgs,
+} from '../lib/cli/cli-tools.js';
+
+function parseGetIdsWithExitOverride(argv) {
+  return createGetIdsCommand()
+    .exitOverride()
+    .configureOutput({ writeErr: () => {}, writeOut: () => {} })
+    .parse(argv)
+    .opts();
+}
 
 describe('cli-tools', () => {
   describe('getGetIdsArgs', () => {
@@ -48,19 +60,27 @@ describe('cli-tools', () => {
       ]);
     });
 
-    it('should fail correctly if key file nonexistent', () => {
+    it('should fail with InvalidArgumentError if key file nonexistent', () => {
       const argv = ['', '', '--key-id-json', 'nonexistent.json'];
 
-      expect(() => getGetIdsArgs(argv)).toThrowError(
-        "ENOENT: no such file or directory, open 'nonexistent.json'",
+      expect(() => parseGetIdsWithExitOverride(argv)).toThrowError(
+        /ENOENT: no such file or directory, open 'nonexistent\.json'/,
       );
     });
 
-    it('should fail correctly if key file invalid', () => {
+    it('should fail with InvalidArgumentError if key file invalid', () => {
       const argv = ['', '', '--key-id-json', 'tests/assets/key_invalid.json'];
 
-      expect(() => getGetIdsArgs(argv)).toThrowError(
-        'Unexpected end of JSON input',
+      expect(() => parseGetIdsWithExitOverride(argv)).toThrowError(
+        /Unexpected end of JSON input/,
+      );
+    });
+
+    it('should fail with InvalidArgumentError if key file contains path traversal', () => {
+      const argv = ['', '', '--key-id-json', 'tests/assets/key_traversal.json'];
+
+      expect(() => parseGetIdsWithExitOverride(argv)).toThrowError(
+        /Invalid GCPKeyInfo\.version/,
       );
     });
   });

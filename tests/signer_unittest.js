@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GCPWbnSigner } from '../lib/wbn-sign-gcp-kms.js';
+import { GCPWbnSigner, validateKeyInfo } from '../lib/wbn-sign-gcp-kms.js';
 import { crc32c } from '../lib/crc32c.js';
 import { createPublicKey, generateKeyPairSync } from 'crypto';
 
@@ -329,6 +329,102 @@ describe('GCPWbnSigner', () => {
     ]);
     await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
       /does not match declared algorithm/,
+    );
+  });
+
+  it('should accept domain-scoped GCP project IDs and strip extra properties', () => {
+    const valid = validateKeyInfo({
+      project: 'google.com:my-iwa-project',
+      location: 'global',
+      keyring: 'prod_ring-1',
+      key: 'signing_key-1',
+      version: '1',
+      extra: 'ignored',
+    });
+    expect(valid).toEqual({
+      project: 'google.com:my-iwa-project',
+      location: 'global',
+      keyring: 'prod_ring-1',
+      key: 'signing_key-1',
+      version: '1',
+    });
+  });
+
+  it('should reject keyInfo fields with path traversal or invalid characters', () => {
+    const base = {
+      project: 'projectId',
+      location: 'locationId',
+      keyring: 'keyringId',
+      key: 'keyId',
+      version: '1',
+    };
+
+    const badCases = [
+      { ...base, version: '1/../cryptoKeyVersions/999' },
+      { ...base, version: '..' },
+      { ...base, version: '.' },
+      { ...base, key: 'key/other' },
+      { ...base, keyring: '{injected}' },
+      { ...base, location: 'global ' },
+      { ...base, project: 'google.com:proj/../other' },
+      { ...base, project: 'google.com:a..b' },
+      { ...base, project: '..' },
+      { ...base, project: 'a:b:c' },
+    ];
+
+    for (const keyInfo of badCases) {
+      expect(() => new GCPWbnSigner(keyInfo, mockKmsClient)).toThrowError(
+        /Invalid GCPKeyInfo\./,
+      );
+    }
+  });
+
+  it('should reject non-object, missing, or non-string keyInfo inputs', () => {
+    expect(() => validateKeyInfo(null)).toThrowError(/Invalid GCPKeyInfo/);
+    expect(() => validateKeyInfo([])).toThrowError(/Invalid GCPKeyInfo/);
+    expect(() => validateKeyInfo('str')).toThrowError(/Invalid GCPKeyInfo/);
+    expect(() =>
+      validateKeyInfo({
+        project: 'projectId',
+        location: 'locationId',
+        keyring: 'keyringId',
+        key: 'keyId',
+      }),
+    ).toThrowError(/Invalid GCPKeyInfo\.version/);
+    expect(
+      () =>
+        new GCPWbnSigner(
+          {
+            project: 'projectId',
+            location: 'locationId',
+            keyring: 'keyringId',
+            key: 'keyId',
+            version: ['1', '2'],
+          },
+          mockKmsClient,
+        ),
+    ).toThrowError(/Invalid GCPKeyInfo\.version/);
+  });
+
+  it('should not be affected by post-construction mutation of keyInfo', async () => {
+    const keyInfo = {
+      project: 'projectId',
+      location: 'locationId',
+      keyring: 'keyringId',
+      key: 'keyId',
+      version: '1',
+    };
+    const isolatedSigner = new GCPWbnSigner(keyInfo, mockKmsClient);
+    keyInfo.version = '1/../cryptoKeyVersions/999';
+
+    await isolatedSigner.sign(new Uint8Array([1, 2, 3]));
+
+    expect(mockKmsClient.cryptoKeyVersionPath).toHaveBeenCalledWith(
+      'projectId',
+      'locationId',
+      'keyringId',
+      'keyId',
+      '1',
     );
   });
 });

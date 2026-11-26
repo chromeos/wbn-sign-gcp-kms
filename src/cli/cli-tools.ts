@@ -14,26 +14,35 @@
  * limitations under the License.
  */
 
-import { Command, OptionValues } from 'commander';
+import { Command, InvalidArgumentError, OptionValues } from 'commander';
 import { readFileSync } from 'fs';
 import { signMain } from './wbn-sign-gcp-kms-cli.js';
 import { getIdsMain } from './wbn-get-ids-gcp-kms-cli.js';
+import { GCPKeyInfo, validateKeyInfo } from '../wbn-sign-gcp-kms.js';
 
 /**
  * @param {string} filename The path to the JSON file containing key ID information.
- * @param {any[]} previous The array to append the key ID information to.
- * @returns {any[]} The array with the key ID information appended.
+ * @param {GCPKeyInfo[]} previous The array to append the key ID information to.
+ * @returns {GCPKeyInfo[]} The array with the key ID information appended.
  */
-function collectKeyIds(filename: string, previous: any[]) {
+function collectKeyIds(filename: string, previous: GCPKeyInfo[]): GCPKeyInfo[] {
   try {
     const fileContents: string = readFileSync(filename, 'utf-8');
-    const keyInfo = JSON.parse(fileContents);
+    const keyInfo = validateKeyInfo(JSON.parse(fileContents));
     previous.push(keyInfo);
   } catch (e) {
-    console.error(`Could not parse or open key ID JSON file: ${filename}`);
-    throw e;
+    throw new InvalidArgumentError(e instanceof Error ? e.message : String(e));
   }
   return previous;
+}
+
+export function createGetIdsCommand(): Command {
+  return new Command().option(
+    '-k, --key-id-json <key-id-json>',
+    'The path to a JSON file containing key ID information.',
+    collectKeyIds,
+    [],
+  );
 }
 
 /**
@@ -42,16 +51,7 @@ function collectKeyIds(filename: string, previous: any[]) {
  * @returns {OptionValues} The parsed command line arguments.
  */
 export function getGetIdsArgs(argv: string[]): OptionValues {
-  const program = new Command();
-  return program
-    .option(
-      '-k, --key-id-json <key-id-json>',
-      'The path to a JSON file containing key ID information.',
-      collectKeyIds,
-      [],
-    )
-    .parse(argv)
-    .opts();
+  return createGetIdsCommand().parse(argv).opts();
 }
 
 /**

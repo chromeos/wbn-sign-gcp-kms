@@ -32,6 +32,18 @@ export interface GCPKeyInfo {
   version: string;
 }
 
+/**
+ * Single Cloud KMS resource segment for location, keyring, key, or version.
+ */
+const KMS_RESOURCE_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * GCP project identifier or number, including domain-scoped IDs such as
+ * `example.com:my-project`.
+ */
+const GCP_PROJECT_SEGMENT_PATTERN =
+  /^[A-Za-z0-9](?:[A-Za-z0-9_.-]*[A-Za-z0-9])?(?::[A-Za-z0-9](?:[A-Za-z0-9_.-]*[A-Za-z0-9])?)?$/;
+
 type SupportedKmsAlgorithm = 'EC_SIGN_P256_SHA256' | 'EC_SIGN_ED25519';
 
 const { CryptoKeyVersionAlgorithm } =
@@ -72,6 +84,63 @@ function doesKeyMatchAlgorithm(
 }
 
 /**
+ * Validates that the input is an object whose mandatory Cloud KMS key fields
+ * are single resource-path segments, and returns a normalized copy.
+ * @param {unknown} keyInfo The key ID information to validate.
+ * @returns {GCPKeyInfo} A validated copy of the key ID information.
+ */
+export function validateKeyInfo(keyInfo: unknown): GCPKeyInfo {
+  if (
+    typeof keyInfo !== 'object' ||
+    keyInfo === null ||
+    Array.isArray(keyInfo)
+  ) {
+    throw new Error('Invalid GCPKeyInfo: expected a JSON object');
+  }
+  const raw = keyInfo as Record<string, unknown>;
+
+  const readField = (field: keyof GCPKeyInfo): string => {
+    if (!Object.prototype.hasOwnProperty.call(raw, field)) {
+      throw new Error(`Invalid GCPKeyInfo.${field}: missing required field`);
+    }
+    const value = raw[field];
+    if (typeof value !== 'string') {
+      throw new Error(
+        `Invalid GCPKeyInfo.${field}: expected a string, got ${JSON.stringify(value)}`,
+      );
+    }
+    return value;
+  };
+
+  const project = readField('project');
+  if (!GCP_PROJECT_SEGMENT_PATTERN.test(project) || project.includes('..')) {
+    throw new Error(
+      `Invalid GCPKeyInfo.project: expected a single GCP project segment, got ${JSON.stringify(project)}`,
+    );
+  }
+
+  const location = readField('location');
+  const keyring = readField('keyring');
+  const key = readField('key');
+  const version = readField('version');
+
+  for (const [field, value] of [
+    ['location', location],
+    ['keyring', keyring],
+    ['key', key],
+    ['version', version],
+  ] as const) {
+    if (!KMS_RESOURCE_SEGMENT_PATTERN.test(value)) {
+      throw new Error(
+        `Invalid GCPKeyInfo.${field}: expected a single path segment matching ${KMS_RESOURCE_SEGMENT_PATTERN}, got ${JSON.stringify(value)}`,
+      );
+    }
+  }
+
+  return { project, location, keyring, key, version };
+}
+
+/**
  * Represents the key information with added web bundle ID.
  */
 export interface GCPKeyInfoWithBundleId extends GCPKeyInfo {
@@ -92,7 +161,7 @@ export class GCPWbnSigner implements ISigningStrategy {
    */
   constructor(keyInfo: GCPKeyInfo, kmsClient?: KeyManagementServiceClient) {
     this.#kmsClient = kmsClient || new KeyManagementServiceClient();
-    this.#keyInfo = keyInfo;
+    this.#keyInfo = validateKeyInfo(keyInfo);
   }
 
   #getKeyVersionName(): string {
@@ -199,8 +268,10 @@ export async function signBundle(
   }
   const signers = await Promise.all(
     keyInfos.map(async (keyInfo) => {
-      const signer = new GCPWbnSigner(keyInfo);
+      const validatedKeyInfo = validateKeyInfo(keyInfo);
+      const signer = new GCPWbnSigner(validatedKeyInfo);
       return {
+        keyInfo: validatedKeyInfo,
         signer,
         webBundleId: new wbnSign.WebBundleId(
           await signer.getPublicKey(),
@@ -211,7 +282,7 @@ export async function signBundle(
   if (webBundleId === undefined) {
     console.log(
       'No Web Bundle Id provided, will deduct it from the first key:',
-      { ...keyInfos[0], webBundleId: signers[0].webBundleId },
+      { ...signers[0].keyInfo, webBundleId: signers[0].webBundleId },
     );
   }
   const { signedWebBundle } = await new wbnSign.IntegrityBlockSigner(
@@ -232,9 +303,10 @@ export async function getWebBundleIds(
 ): Promise<GCPKeyInfoWithBundleId[]> {
   return Promise.all(
     keyInfos.map(async (keyInfo) => {
-      const signer = new GCPWbnSigner(keyInfo);
+      const validatedKeyInfo = validateKeyInfo(keyInfo);
+      const signer = new GCPWbnSigner(validatedKeyInfo);
       return {
-        ...keyInfo,
+        ...validatedKeyInfo,
         webBundleId: new wbnSign.WebBundleId(
           await signer.getPublicKey(),
         ).serialize(),
