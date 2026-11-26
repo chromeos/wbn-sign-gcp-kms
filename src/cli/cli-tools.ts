@@ -15,10 +15,21 @@
  */
 
 import { Command, InvalidArgumentError, OptionValues } from 'commander';
-import { readFileSync } from 'fs';
-import { signMain } from './wbn-sign-gcp-kms-cli.js';
-import { getIdsMain } from './wbn-get-ids-gcp-kms-cli.js';
-import { GCPKeyInfo, validateKeyInfo } from '../wbn-sign-gcp-kms.js';
+import { readFileSync, writeFileSync } from 'fs';
+import {
+  GCPKeyInfo,
+  getWebBundleIds,
+  signBundle,
+  validateKeyInfo,
+} from '../wbn-sign-gcp-kms.js';
+
+/**
+ * Handlers invoked by {@link wbnGcpKmpSubcommands}.
+ */
+export interface SubcommandHandlers {
+  sign: (options: OptionValues) => Promise<void>;
+  getIds: (options: OptionValues) => Promise<void>;
+}
 
 /**
  * @param {string} filename The path to the JSON file containing key ID information.
@@ -36,8 +47,8 @@ function collectKeyIds(filename: string, previous: GCPKeyInfo[]): GCPKeyInfo[] {
   return previous;
 }
 
-export function createGetIdsCommand(): Command {
-  return new Command().option(
+function configureGetIdsCommand(command: Command): Command {
+  return command.option(
     '-k, --key-id-json <key-id-json>',
     'The path to a JSON file containing key ID information.',
     collectKeyIds,
@@ -45,23 +56,8 @@ export function createGetIdsCommand(): Command {
   );
 }
 
-/**
- * Parses the command line arguments for the dump-id command.
- * @param {string[]} argv The command line arguments.
- * @returns {OptionValues} The parsed command line arguments.
- */
-export function getGetIdsArgs(argv: string[]): OptionValues {
-  return createGetIdsCommand().parse(argv).opts();
-}
-
-/**
- * Parses the command line arguments for the sign command.
- * @param {string[]} argv The command line arguments.
- * @returns {OptionValues} The parsed command line arguments.
- */
-export function getSignArgs(argv: string[]): OptionValues {
-  const program = new Command();
-  return program
+function configureSignCommand(command: Command): Command {
+  return command
     .requiredOption(
       '-i, --input <input-file>',
       'The path to the input web bundle file.',
@@ -80,19 +76,88 @@ export function getSignArgs(argv: string[]): OptionValues {
       'The path to a JSON file containing key ID information.',
       collectKeyIds,
       [],
-    )
-    .parse(argv)
-    .opts();
+    );
+}
+
+/**
+ * Creates the standalone Commander command for `get-ids`.
+ */
+export function createGetIdsCommand(): Command {
+  return configureGetIdsCommand(new Command());
+}
+
+/**
+ * Creates the standalone Commander command for `sign`.
+ */
+export function createSignCommand(): Command {
+  return configureSignCommand(new Command());
+}
+
+/**
+ * Executes the sign command with parsed options.
+ */
+export async function runSign(options: OptionValues): Promise<void> {
+  const { input, output, webBundleId, keyIdJson } = options;
+  const webBundle = readFileSync(input);
+  const signedWebBundle = await signBundle(webBundle, keyIdJson, webBundleId);
+  writeFileSync(output, signedWebBundle);
+}
+
+/**
+ * Executes the get-ids command with parsed options.
+ */
+export async function runGetIds(options: OptionValues): Promise<void> {
+  console.log(await getWebBundleIds(options.keyIdJson));
+}
+
+/**
+ * Parses the command line arguments for the dump-id command.
+ * @param {string[]} argv The command line arguments.
+ * @returns {OptionValues} The parsed command line arguments.
+ */
+export function getGetIdsArgs(argv: string[]): OptionValues {
+  return createGetIdsCommand().parse(argv).opts();
+}
+
+/**
+ * Parses the command line arguments for the sign command.
+ * @param {string[]} argv The command line arguments.
+ * @returns {OptionValues} The parsed command line arguments.
+ */
+export function getSignArgs(argv: string[]): OptionValues {
+  return createSignCommand().parse(argv).opts();
+}
+
+/**
+ * Builds the root `wbn-gcp-kms` Commander program with in-process `sign` and
+ * `get-ids` subcommands.
+ */
+export function createProgram(
+  handlers: SubcommandHandlers = { sign: runSign, getIds: runGetIds },
+): Command {
+  const program = new Command();
+  program.name('wbn-gcp-kms');
+  configureSignCommand(
+    program.command('sign').description('Sign a web bundle using GCP KMS.'),
+  ).action(async (options: OptionValues) => {
+    await handlers.sign(options);
+  });
+  configureGetIdsCommand(
+    program
+      .command('get-ids')
+      .description('Get the web bundle IDs for a set of key IDs.'),
+  ).action(async (options: OptionValues) => {
+    await handlers.getIds(options);
+  });
+  return program;
 }
 
 /**
  * Main function for the wbn-gcp-kms command. Directs to subcommands `sign` and `get-ids`.
  */
-export function wbnGcpKmpSubcommands(argv: string[]) {
-  const program = new Command();
-  program.name('wbn-gcp-kms');
-  program
-    .command('sign', 'Sign a web bundle using GCP KMS.')
-    .command('get-ids', 'Get the web bundle IDs for a set of key IDs.')
-    .parse(argv);
+export async function wbnGcpKmpSubcommands(
+  argv: string[],
+  handlers: SubcommandHandlers = { sign: runSign, getIds: runGetIds },
+): Promise<void> {
+  await createProgram(handlers).parseAsync(argv);
 }

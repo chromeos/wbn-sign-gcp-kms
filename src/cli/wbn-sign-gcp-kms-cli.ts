@@ -14,16 +14,11 @@
  * limitations under the License.
  */
 
-import { signBundle } from '../wbn-sign-gcp-kms.js';
-import * as fs from 'fs';
-import { getSignArgs } from './cli-tools.js';
+import { getSignArgs, runSign } from './cli-tools.js';
 
 /**
  * Main function for the sign command.
  */
-export async function signMain() {
-  const { input, output, webBundleId, keyIdJson } = getSignArgs(process.argv);
-  const webBundle = fs.readFileSync(input);
-  const signedWebBundle = await signBundle(webBundle, keyIdJson, webBundleId);
-  fs.writeFileSync(output, signedWebBundle);
+export async function signMain(argv: string[] = process.argv) {
+  await runSign(getSignArgs(argv));
 }
