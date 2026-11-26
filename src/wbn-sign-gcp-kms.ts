@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { KeyManagementServiceClient } from '@google-cloud/kms';
+import { KeyManagementServiceClient, protos } from '@google-cloud/kms';
 import { ISigningStrategy } from 'wbn-sign/lib/wbn-sign';
 import * as wbnSign from 'wbn-sign';
 import { KeyObject, createPublicKey } from 'crypto';
@@ -30,6 +30,45 @@ export interface GCPKeyInfo {
   keyring: string;
   key: string;
   version: string;
+}
+
+type SupportedKmsAlgorithm = 'EC_SIGN_P256_SHA256' | 'EC_SIGN_ED25519';
+
+const { CryptoKeyVersionAlgorithm } =
+  protos.google.cloud.kms.v1.CryptoKeyVersion;
+
+function normalizeSupportedAlgorithm(
+  algorithm:
+    | protos.google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionAlgorithm
+    | keyof typeof protos.google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionAlgorithm
+    | null
+    | undefined,
+): SupportedKmsAlgorithm | null {
+  switch (algorithm) {
+    case 'EC_SIGN_P256_SHA256':
+    case CryptoKeyVersionAlgorithm.EC_SIGN_P256_SHA256:
+      return 'EC_SIGN_P256_SHA256';
+    case 'EC_SIGN_ED25519':
+    case CryptoKeyVersionAlgorithm.EC_SIGN_ED25519:
+      return 'EC_SIGN_ED25519';
+    default:
+      return null;
+  }
+}
+
+function doesKeyMatchAlgorithm(
+  key: KeyObject,
+  algorithm: SupportedKmsAlgorithm,
+): boolean {
+  switch (algorithm) {
+    case 'EC_SIGN_P256_SHA256':
+      return (
+        key.asymmetricKeyType === 'ec' &&
+        key.asymmetricKeyDetails?.namedCurve === 'prime256v1'
+      );
+    case 'EC_SIGN_ED25519':
+      return key.asymmetricKeyType === 'ed25519';
+  }
 }
 
 /**
@@ -109,13 +148,37 @@ export class GCPWbnSigner implements ISigningStrategy {
    * @returns {Promise<KeyObject>} A promise that resolves with the public key.
    */
   async getPublicKey(): Promise<KeyObject> {
-    const [publicKey] = await this.#kmsClient.getPublicKey({
-      name: this.#getKeyVersionName(),
-    });
-    if (typeof publicKey.pem === 'string') {
-      return createPublicKey(publicKey.pem as string);
+    const name = this.#getKeyVersionName();
+    const [publicKey] = await this.#kmsClient.getPublicKey({ name });
+    if (typeof publicKey.pem !== 'string') {
+      throw new Error('No public key in response!');
     }
-    throw new Error('No public key in response!');
+    if (publicKey.name !== name) {
+      throw new Error(
+        'getPublicKey: response failed integrity verification (name mismatch)',
+      );
+    }
+    if (
+      parseCrc32cValue(publicKey.pemCrc32c) !==
+      crc32c(Buffer.from(publicKey.pem, 'utf8'))
+    ) {
+      throw new Error(
+        'getPublicKey: response failed integrity verification (PEM CRC32C mismatch)',
+      );
+    }
+    const algorithm = normalizeSupportedAlgorithm(publicKey.algorithm);
+    if (algorithm === null) {
+      throw new Error(
+        `getPublicKey: unsupported signing algorithm: ${String(publicKey.algorithm)}`,
+      );
+    }
+    const keyObject = createPublicKey(publicKey.pem);
+    if (!doesKeyMatchAlgorithm(keyObject, algorithm)) {
+      throw new Error(
+        `getPublicKey: public key PEM does not match declared algorithm ${algorithm}`,
+      );
+    }
+    return keyObject;
   }
 }
 

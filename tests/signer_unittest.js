@@ -16,15 +16,31 @@
 
 import { GCPWbnSigner } from '../lib/wbn-sign-gcp-kms.js';
 import { crc32c } from '../lib/crc32c.js';
-import { createPublicKey } from 'crypto';
+import { createPublicKey, generateKeyPairSync } from 'crypto';
+
+const TEST_P256_PUBLIC_KEY = generateKeyPairSync('ec', {
+  namedCurve: 'prime256v1',
+}).publicKey.export({ type: 'spki', format: 'pem' });
+
+const TEST_ED25519_PUBLIC_KEY = generateKeyPairSync('ed25519').publicKey.export(
+  { type: 'spki', format: 'pem' },
+);
+
+const TEST_SECP256K1_PUBLIC_KEY = generateKeyPairSync('ec', {
+  namedCurve: 'secp256k1',
+}).publicKey.export({ type: 'spki', format: 'pem' });
 
 const KEY_VERSION_NAME = 'path/to/key/version';
 
-const TEST_PUBLIC_KEY =
-  '-----BEGIN PUBLIC KEY-----\n' +
-  'MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE0P43I+jv1i2cc+IHBH3Ht/AbaJ0Bwwtk\n' +
-  'x2BDh0PZ7t09Epz55kv+/tJq4n9Lty8GJ5rm9povD3My/dz5Vkd7JA==\n' +
-  '-----END PUBLIC KEY-----\n';
+function makePublicKeyResponse(pem, overrides = {}) {
+  return {
+    pem,
+    pemCrc32c: { value: String(crc32c(Buffer.from(pem, 'utf8'))) },
+    name: KEY_VERSION_NAME,
+    algorithm: 'EC_SIGN_P256_SHA256',
+    ...overrides,
+  };
+}
 
 function makeSignResponse(signature, overrides = {}) {
   return {
@@ -49,11 +65,9 @@ describe('GCPWbnSigner', () => {
       asymmetricSign: jasmine
         .createSpy('asymmetricSign')
         .and.resolveTo([makeSignResponse(defaultSignature)]),
-      getPublicKey: jasmine.createSpy('getPublicKey').and.resolveTo([
-        {
-          pem: TEST_PUBLIC_KEY,
-        },
-      ]),
+      getPublicKey: jasmine
+        .createSpy('getPublicKey')
+        .and.resolveTo([makePublicKeyResponse(TEST_P256_PUBLIC_KEY)]),
     };
 
     signer = new GCPWbnSigner(
@@ -182,13 +196,12 @@ describe('GCPWbnSigner', () => {
     ).toBeRejectedWithError(/signature CRC32C mismatch/);
   });
 
-  it('should get public key', async () => {
-    const expectedPublicKey = createPublicKey(TEST_PUBLIC_KEY);
-    mockKmsClient.cryptoKeyVersionPath.and.returnValue('path/to/key/version');
+  it('should get P-256 public key and accept numeric KMS algorithm enum', async () => {
+    const expectedPublicKey = createPublicKey(TEST_P256_PUBLIC_KEY);
 
     const publicKey = await signer.getPublicKey();
 
-    expect(publicKey).toEqual(expectedPublicKey);
+    expect(publicKey.equals(expectedPublicKey)).toBeTrue();
     expect(mockKmsClient.cryptoKeyVersionPath).toHaveBeenCalledWith(
       'projectId',
       'locationId',
@@ -197,8 +210,28 @@ describe('GCPWbnSigner', () => {
       'versionId',
     );
     expect(mockKmsClient.getPublicKey).toHaveBeenCalledWith({
-      name: 'path/to/key/version',
+      name: KEY_VERSION_NAME,
     });
+
+    mockKmsClient.getPublicKey.and.resolveTo([
+      makePublicKeyResponse(TEST_P256_PUBLIC_KEY, { algorithm: 12 }),
+    ]);
+    expect((await signer.getPublicKey()).equals(expectedPublicKey)).toBeTrue();
+  });
+
+  it('should get Ed25519 public key and accept numeric KMS algorithm enum', async () => {
+    const expectedPublicKey = createPublicKey(TEST_ED25519_PUBLIC_KEY);
+    mockKmsClient.getPublicKey.and.resolveTo([
+      makePublicKeyResponse(TEST_ED25519_PUBLIC_KEY, {
+        algorithm: 'EC_SIGN_ED25519',
+      }),
+    ]);
+    expect((await signer.getPublicKey()).equals(expectedPublicKey)).toBeTrue();
+
+    mockKmsClient.getPublicKey.and.resolveTo([
+      makePublicKeyResponse(TEST_ED25519_PUBLIC_KEY, { algorithm: 40 }),
+    ]);
+    expect((await signer.getPublicKey()).equals(expectedPublicKey)).toBeTrue();
   });
 
   it('should throw error when getting public key fails', async () => {
@@ -216,6 +249,86 @@ describe('GCPWbnSigner', () => {
 
     await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
       'No public key in response!',
+    );
+  });
+
+  it('should reject public key with mismatched name', async () => {
+    mockKmsClient.getPublicKey.and.resolveTo([
+      makePublicKeyResponse(TEST_P256_PUBLIC_KEY, {
+        name: 'path/to/OTHER/version',
+      }),
+    ]);
+
+    await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
+      /name mismatch/,
+    );
+  });
+
+  it('should reject public key with mismatched or missing pemCrc32c', async () => {
+    mockKmsClient.getPublicKey.and.resolveTo([
+      makePublicKeyResponse(TEST_P256_PUBLIC_KEY, {
+        pemCrc32c: { value: '0' },
+      }),
+    ]);
+    await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
+      /PEM CRC32C mismatch/,
+    );
+
+    mockKmsClient.getPublicKey.and.resolveTo([
+      makePublicKeyResponse(TEST_P256_PUBLIC_KEY, {
+        pemCrc32c: { value: null },
+      }),
+    ]);
+    await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
+      /PEM CRC32C mismatch/,
+    );
+
+    mockKmsClient.getPublicKey.and.resolveTo([
+      makePublicKeyResponse(TEST_P256_PUBLIC_KEY, { pemCrc32c: undefined }),
+    ]);
+    await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
+      /PEM CRC32C mismatch/,
+    );
+  });
+
+  it('should reject public key with unsupported or missing signing algorithm', async () => {
+    for (const algorithm of ['RSA_SIGN_PKCS1_4096_SHA512', null, undefined]) {
+      mockKmsClient.getPublicKey.and.resolveTo([
+        makePublicKeyResponse(TEST_P256_PUBLIC_KEY, { algorithm }),
+      ]);
+
+      await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
+        /unsupported signing algorithm/,
+      );
+    }
+  });
+
+  it('should reject public key whose PEM does not match declared KMS algorithm', async () => {
+    mockKmsClient.getPublicKey.and.resolveTo([
+      makePublicKeyResponse(TEST_SECP256K1_PUBLIC_KEY, {
+        algorithm: 'EC_SIGN_P256_SHA256',
+      }),
+    ]);
+    await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
+      /does not match declared algorithm/,
+    );
+
+    mockKmsClient.getPublicKey.and.resolveTo([
+      makePublicKeyResponse(TEST_ED25519_PUBLIC_KEY, {
+        algorithm: 'EC_SIGN_P256_SHA256',
+      }),
+    ]);
+    await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
+      /does not match declared algorithm/,
+    );
+
+    mockKmsClient.getPublicKey.and.resolveTo([
+      makePublicKeyResponse(TEST_P256_PUBLIC_KEY, {
+        algorithm: 'EC_SIGN_ED25519',
+      }),
+    ]);
+    await expectAsync(signer.getPublicKey()).toBeRejectedWithError(
+      /does not match declared algorithm/,
     );
   });
 });
