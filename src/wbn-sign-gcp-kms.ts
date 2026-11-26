@@ -18,6 +18,7 @@ import { KeyManagementServiceClient } from '@google-cloud/kms';
 import { ISigningStrategy } from 'wbn-sign/lib/wbn-sign';
 import * as wbnSign from 'wbn-sign';
 import { KeyObject, createPublicKey } from 'crypto';
+import { crc32c, parseCrc32cValue } from './crc32c.js';
 
 /**
  * Represents the key ID information for a Google Cloud KMS key.
@@ -55,27 +56,52 @@ export class GCPWbnSigner implements ISigningStrategy {
     this.#keyInfo = keyInfo;
   }
 
+  #getKeyVersionName(): string {
+    return this.#kmsClient.cryptoKeyVersionPath(
+      this.#keyInfo.project,
+      this.#keyInfo.location,
+      this.#keyInfo.keyring,
+      this.#keyInfo.key,
+      this.#keyInfo.version,
+    );
+  }
+
   /**
    * Signs the given data using the Google Cloud KMS service.
    * @param {Uint8Array} data The data to sign.
    * @returns {Promise<Uint8Array>} A promise that resolves with the signature.
    */
   async sign(data: Uint8Array): Promise<Uint8Array> {
+    const name = this.#getKeyVersionName();
+    const dataCrc32c = crc32c(data);
     const [response] = await this.#kmsClient.asymmetricSign({
-      name: this.#kmsClient.cryptoKeyVersionPath(
-        this.#keyInfo.project,
-        this.#keyInfo.location,
-        this.#keyInfo.keyring,
-        this.#keyInfo.key,
-        this.#keyInfo.version,
-      ),
-      data: data,
+      name,
+      data,
+      dataCrc32c: { value: dataCrc32c },
     });
 
-    if (response.signature instanceof Uint8Array) {
-      return response.signature;
+    if (!(response.signature instanceof Uint8Array)) {
+      throw new Error('No signature in response!');
     }
-    throw new Error('No signature in response!');
+    if (response.name !== name) {
+      throw new Error(
+        'asymmetricSign: response failed integrity verification (name mismatch)',
+      );
+    }
+    // Fails closed without retrying automatically so callers control retry policy.
+    if (response.verifiedDataCrc32c !== true) {
+      throw new Error(
+        'asymmetricSign: response failed integrity verification (request data CRC32C not verified)',
+      );
+    }
+    if (
+      parseCrc32cValue(response.signatureCrc32c) !== crc32c(response.signature)
+    ) {
+      throw new Error(
+        'asymmetricSign: response failed integrity verification (signature CRC32C mismatch)',
+      );
+    }
+    return response.signature;
   }
 
   /**
@@ -84,13 +110,7 @@ export class GCPWbnSigner implements ISigningStrategy {
    */
   async getPublicKey(): Promise<KeyObject> {
     const [publicKey] = await this.#kmsClient.getPublicKey({
-      name: this.#kmsClient.cryptoKeyVersionPath(
-        this.#keyInfo.project,
-        this.#keyInfo.location,
-        this.#keyInfo.keyring,
-        this.#keyInfo.key,
-        this.#keyInfo.version,
-      ),
+      name: this.#getKeyVersionName(),
     });
     if (typeof publicKey.pem === 'string') {
       return createPublicKey(publicKey.pem as string);
