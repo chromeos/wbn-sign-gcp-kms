@@ -5,6 +5,11 @@ This is a Node.js module for signing
 using [wbn-sign](https://github.com/WICG/webpackage/tree/main/js/sign) with
 [GCP KMS API](https://cloud.google.com/kms/docs/create-validate-signatures).
 
+## Requirements
+
+- A Google Cloud KMS asymmetric signing key version using `EC_SIGN_P256_SHA256`
+  or `EC_SIGN_ED25519`
+
 ## Usage
 
 ### Lib
@@ -14,11 +19,11 @@ the `wbn-sign` NPM package like this:
 
 ```js
 import { GCPWbnSigner } from 'wbn-sign-gcp-kms';
+import * as wbnSign from 'wbn-sign';
 
 ...
 
 const { signedWebBundle } = await new wbnSign.IntegrityBlockSigner(
-  true,
   webBundle,
   webBundleId,
   [
@@ -27,9 +32,9 @@ const { signedWebBundle } = await new wbnSign.IntegrityBlockSigner(
       location: locationId,
       keyring: keyringId,
       key: keyId,
-      version: versionId
-    })
-  ]
+      version: versionId,
+    }),
+  ],
 ).sign();
 ```
 
@@ -42,16 +47,16 @@ import { signBundle } from 'wbn-sign-gcp-kms';
 
 const signedWebBundle = await signBundle(
   webBundle,
-  webBundleId,
   [
     {
       project: projectId,
       location: locationId,
       keyring: keyringId,
       key: keyId,
-      version: versionId
-    }
-  ]
+      version: versionId,
+    },
+  ],
+  webBundleId,
 );
 ```
 
@@ -67,24 +72,22 @@ import { getWebBundleIds } from 'wbn-sign-gcp-kms';
 
 ...
 
-const keyIdsWithBundleIds = await getWebBundleIds(
-  [
-    {
-      project: projectId,
-      location: locationId,
-      keyring: keyringId,
-      key: keyId,
-      version: versionId
-    },
-    {
-      project: projectId2,
-      location: locationId2,
-      keyring: keyringId2,
-      key: keyId2,
-      version: versionId2
-    }
-  ]
-)
+const keyIdsWithBundleIds = await getWebBundleIds([
+  {
+    project: projectId,
+    location: locationId,
+    keyring: keyringId,
+    key: keyId,
+    version: versionId,
+  },
+  {
+    project: projectId2,
+    location: locationId2,
+    keyring: keyringId2,
+    key: keyId2,
+    version: versionId2,
+  },
+]);
 ```
 
 This will return `GCPKeyInfoWithBundleId[]` for the provided keys.
@@ -126,7 +129,9 @@ $ wbn-gcp-kms get-ids --key-id-json ./key1.json --key-id-json ./key2.json
 ]
 ```
 
-Sample JSON identifying a key:
+Sample JSON identifying a key (all five fields must be strings containing a
+single Cloud KMS resource segment; domain-scoped project IDs such as
+`example.com:project-id` are supported):
 
 ```json
 {
